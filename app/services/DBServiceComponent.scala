@@ -3,23 +3,17 @@ package services
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import org.joda.time.DateTime
+
 import models.BaseModel
+import play.api.Logger
 import play.api.Play.current
 import play.api.libs.json.JsObject
-import play.api.libs.json.Json
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
-import play.api.libs.json.__
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.modules.reactivemongo.json.collection.JSONCollection
-import reactivemongo.core.commands.LastError
 import reactivemongo.api.QueryOpts
-import reactivemongo.bson.BSONObjectID
-import play.api.Logger
-import reactivemongo.core.errors.DatabaseException
-import models.User
+import reactivemongo.core.commands.LastError
 
 trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
     val dbService: DBService

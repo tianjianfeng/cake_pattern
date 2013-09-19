@@ -1,16 +1,18 @@
 package unit.services
 
-import org.specs2.mutable.Specification
-import services.DBRepositoryComponent
-import org.specs2.mock.Mockito
-import models.BaseModel
-import scala.concurrent.Future
-import reactivemongo.core.commands.LastError
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+
+import org.specs2.mock.Mockito
+import org.specs2.mutable.Specification
+
+import models.BaseModel
 import models.User
 import play.modules.reactivemongo.json.collection.JSONCollection
-import scala.util.Success
-import scala.util.Failure
+import reactivemongo.core.commands.LastError
+import services.DBRepositoryComponent
 
 class DBServiceUnitSpec extends Specification with Mockito {
 

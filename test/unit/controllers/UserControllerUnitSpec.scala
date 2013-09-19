@@ -2,44 +2,27 @@ package unit.controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import org.apache.commons.codec.digest.DigestUtils
-import org.joda.time.DateTime
-import org.joda.time.Period
-import org.mockito.Mockito.RETURNS_DEEP_STUBS
+
 import org.mockito.Mockito.when
-import org.mockito.Mockito.withSettings
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
+
 import controllers.UserCtrl
-import services.DBServiceComponent
 import models.User
-import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.test.FakeRequest
-import play.api.test.Helpers.BAD_REQUEST
 import play.api.test.Helpers.CREATED
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
-import play.api.test.Helpers.NOT_FOUND
 import play.api.test.Helpers.OK
 import play.api.test.Helpers.contentAsString
-import play.api.test.Helpers.session
 import play.api.test.Helpers.contentType
 import play.api.test.Helpers.status
-import play.api.test.WithApplication
-import play.modules.reactivemongo.json.BSONFormats.BSONDocumentFormat
-import reactivemongo.bson.BSONDateTime
-import reactivemongo.bson.BSONDocument
-import reactivemongo.bson.BSONInteger
+import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.bson.BSONString
-import reactivemongo.bson.Producer.nameValue2Producer
-import services.UserServiceComponent
-import reactivemongo.core.commands.LastError
-import reactivemongo.bson.BSONInteger
-import services.UserRepositoryComponent
 import services.ServiceException
-import play.modules.reactivemongo.json.BSONFormats._
+import services.UserRepositoryComponent
+import services.UserServiceComponent
 
 class UserControllerUnitSpec extends Specification with Mockito {
 
