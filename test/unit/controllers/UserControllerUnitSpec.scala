@@ -27,8 +27,8 @@ import services.UserServiceComponent
 class UserControllerUnitSpec extends Specification with Mockito {
 
     class TestController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
-        val dbService = mock[UserService] //(withSettings().defaultAnswer(RETURNS_DEEP_STUBS))
-        val dbRepository = mock[UserRepository] //(withSettings().defaultAnswer(RETURNS_DEEP_STUBS))
+        val dbService = mock[UserService] 
+        val dbRepository = mock[UserRepository] 
     }
 
     "User Controller" should {
