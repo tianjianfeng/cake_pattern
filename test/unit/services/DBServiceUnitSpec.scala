@@ -4,67 +4,127 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
-
+import org.mockito.Mockito.when
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
-
-import models.BaseModel
-import models.User
+import play.api.libs.functional.syntax.toInvariantFunctorOps
+import play.api.libs.json.JsObject
+import play.api.libs.json.Reads.StringReads
+import play.api.libs.json.Writes.StringWrites
 import play.modules.reactivemongo.json.collection.JSONCollection
-import reactivemongo.core.commands.LastError
 import services.DBRepositoryComponent
+import services.DBServiceComponent
+import play.api.libs.json.Json
 
 class DBServiceUnitSpec extends Specification with Mockito {
 
-    class TestDBRepository extends DBRepositoryComponent[BaseModel] {
-        val dbRepository = new DBRepository
+    case class TestModel(title: String)
+    object TestModel {
+        implicit val fmt = Json.format[TestModel]
+    }
+
+    class TestDBService extends DBServiceComponent[TestModel] with DBRepositoryComponent[TestModel] {
+        val dbService = new DBService
+        val dbRepository = mock[DBRepository]
         def coll = mock[JSONCollection]
     }
 
     "DBService" should {
-        "return object if the operation is successful" in {
-            val operation = Future(LastError(ok = true, err = None, code = None, errMsg = None, originalDocument = None, updated = 1, updatedExisting = true))
-            val testRepo = new TestDBRepository()
-            val user = User(firstname = "abc", lastname = "def")
 
-            val result = testRepo.dbRepository.recover[User](operation)(user)
-            val futureUser = result map { either =>
+        "return one object when send the query to the repository" in {
+            val testDBService = new TestDBService()
+            val query = mock[JsObject]
+            val testModel = mock[TestModel]
+
+            when(testDBService.dbRepository.findOne(query)).thenReturn(Future(Some(testModel)))
+            testDBService.dbService.findOne(query) onComplete {
+                case Success(result) => result.get must equalTo(testModel)
+                case Failure(t) =>
+            }
+        }
+
+        "return a list of objects when calling find" in {
+            val testDBService = new TestDBService()
+            val query = mock[JsObject]
+            val testModelList = Seq(mock[TestModel], mock[TestModel])
+
+            when(testDBService.dbRepository.find(query, 0, 0)).thenReturn(Future(testModelList))
+            testDBService.dbService.find(query, 0, 0) onComplete {
+                case Success(result) => result must equalTo(testModelList)
+                case Failure(t) =>
+            }
+        }
+
+        "return a list of objects when calling find" in {
+            val testDBService = new TestDBService()
+            val testModel = mock[TestModel]
+
+            when(testDBService.dbRepository.insert(testModel)).thenReturn(Future(Right(testModel)))
+
+            val futureResult = testDBService.dbService.insert(testModel) map { either =>
                 either match {
-                    case Right(returnedUser) => returnedUser
-
+                    case Right(result) => result
                     case Left(_) =>
                 }
             }
-
-            futureUser onComplete {
-                case Success(aUser) => aUser must equalTo(user)
-            }
-        }
-
-        "return exception if the operation is failed" in {
-            val operation = Future(LastError(ok = false, err = Some("field"), code = Some(1), errMsg = Some("mymsg"), originalDocument = None, updated = 0, updatedExisting = false))
-            val testRepo = new TestDBRepository()
-            val user = User(firstname = "abc", lastname = "def")
-
-            val result = testRepo.dbRepository.recover[User](operation)(user)
-            val futureResult = result map { either =>
-                either match {
-                    case Right(_) => 
-
-                    case Left(e) => e.message
-                }
-            }
-
             futureResult onComplete {
-                case Failure(t) => {
+                case Success(result) => result must equalTo(testModel)
+                case Failure(t) =>
+            }
+        }
+        "return the updated objects when calling update" in {
+            val testDBService = new TestDBService()
+            val selector = mock[JsObject]
+            val testModel = mock[TestModel]
 
-                }
-                case Success(msg) => {
-                    msg must equalTo ("mymsg")                    
+            when(testDBService.dbRepository.update(selector, testModel)).thenReturn(Future(Right(testModel)))
+
+            val futureResult = testDBService.dbService.update(selector, testModel) map { either =>
+                either match {
+                    case Right(result) => result
+                    case Left(_) =>
                 }
             }
-
+            futureResult onComplete {
+                case Success(result) => result must equalTo(testModel)
+                case Failure(t) =>
+            }
         }
 
+        "return the updated json objects when calling updatePartial" in {
+            val testDBService = new TestDBService()
+            val selector = mock[JsObject]
+            val updatedObj = mock[JsObject]
+
+            when(testDBService.dbRepository.updatePartial(selector, updatedObj)).thenReturn(Future(Right(updatedObj)))
+
+            val futureResult = testDBService.dbService.updatePartial(selector, updatedObj) map { either =>
+                either match {
+                    case Right(result) => result
+                    case Left(_) =>
+                }
+            }
+            futureResult onComplete {
+                case Success(result) => result must equalTo(updatedObj)
+                case Failure(t) =>
+            }
+        }
+        "return true when the object is successfully removed" in {
+            val testDBService = new TestDBService()
+            val selector = mock[JsObject]
+
+            when(testDBService.dbRepository.remove(selector)).thenReturn(Future(Right(true)))
+
+            val futureResult = testDBService.dbService.remove(selector) map { either =>
+                either match {
+                    case Right(result) => result
+                    case Left(_) =>
+                }
+            }
+            futureResult onComplete {
+                case Success(result) => result must equalTo(true)
+                case Failure(t) =>
+            }
+        }
     }
 }

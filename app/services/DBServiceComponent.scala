@@ -15,7 +15,7 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
 
-trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
+trait DBServiceComponent[T] { this: DBRepositoryComponent[T] =>
     val dbService: DBService
 
     class DBService {
@@ -43,7 +43,8 @@ trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
     }
 }
 
-trait DBRepositoryComponent[T <: BaseModel] {
+//trait DBRepositoryComponent[T <: BaseModel] {
+trait DBRepositoryComponent[T] {
 
     def db = ReactiveMongoPlugin.db
     def coll: JSONCollection
