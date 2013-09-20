@@ -24,7 +24,7 @@ trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
             dbRepository.findOne(query)
         }
 
-        def find(sel: JsObject, limit: Int = 0, skip: Int = 0)(implicit reader: Reads[T]): Future[Seq[T]] = {
+        def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
             dbRepository.find(sel, limit, skip)
         }
 
@@ -56,7 +56,7 @@ trait DBRepositoryComponent[T <: BaseModel] {
         def findOne(query: JsObject)(implicit reader: Reads[T]): Future[Option[T]] = {
             coll.find(query).one[T]
         }
-        def find(sel: JsObject, limit: Int = 0, skip: Int = 0)(implicit reader: Reads[T]): Future[Seq[T]] = {
+        def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
             val cursor = coll.find(sel).options(QueryOpts().skip(skip)).cursor[T]
             if (limit != 0) cursor.toList(limit) else cursor.toList
         }

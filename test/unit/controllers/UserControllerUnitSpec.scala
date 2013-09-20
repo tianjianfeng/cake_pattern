@@ -79,7 +79,22 @@ class UserControllerUnitSpec extends Specification with Mockito {
             contentAsString(result) must contain("firstname")
             contentAsString(result) must contain("lastname")
         }
+        "return OK with a list of users as json when finding users with skip and limit" in {
+            val controller = new TestController()
 
+
+            val selector = Json.obj()
+            val (limit, skip) = (0, 0)
+            val users = Seq(User(firstname = "abc", lastname = "def"), User(firstname= "123", lastname="456"))
+            when(controller.dbService.find(selector, limit, skip)).thenReturn(Future(users))
+            
+            val req = FakeRequest().withBody(selector)
+            val result = controller.find(limit, skip)(req)
+
+            status(result) mustEqual OK
+            contentType(result) must beSome("application/json")
+            Json.parse(contentAsString(result)).as[Seq[User]].size must equalTo(2)
+        }
         "return OK when a user is updated successfully by its id" in {
             val controller = new TestController()
             val id = "523adf223386b69b47c63431"

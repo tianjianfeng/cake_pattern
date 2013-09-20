@@ -7,6 +7,7 @@ GET     /                           controllers.Application.index
 
 POST 	/users					controllers.UserController.create
 GET		/users/:id				controllers.UserController.findOne(id: String)
+POST		/users/find			controllers.UserController.find(limit: Int ?= 0, skip: Int ?=0)
 PUT		/users/:id				controllers.UserController.update(id: String)
 GET		/users/specific/:id				controllers.UserController.specific(id: String)
 

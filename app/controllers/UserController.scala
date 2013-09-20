@@ -12,6 +12,7 @@ import models.User
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.json.JsObject
+import play.api.libs.json.Writes
 
 trait UserCtrl extends Controller {
     this: UserServiceComponent with UserRepositoryComponent =>
@@ -27,12 +28,21 @@ trait UserCtrl extends Controller {
         }
     }
 
-    def findOne (id: String) = Action {
+    def findOne(id: String) = Action {
         val query = Json.obj("_id" -> BSONObjectID(id))
         Async {
             dbService.findOne(query) map {
                 case Some(user) => Ok(Json.toJson(user))
                 case None => NotFound
+            }
+        }
+    }
+
+    def find(limit: Int, skip: Int) = Action(parse.json) { implicit request =>
+        val query = request.body.asInstanceOf[JsObject]
+        Async {
+            dbService.find(query, limit, skip) map { users =>
+                Ok(Json.toJson(users))
             }
         }
     }
@@ -47,8 +57,8 @@ trait UserCtrl extends Controller {
             }
         }
     }
-    
-    def specific (id: String) = Action {
+
+    def specific(id: String) = Action {
         val query = Json.obj("_id" -> BSONObjectID(id))
         Async {
             dbService.specific(query) map {
