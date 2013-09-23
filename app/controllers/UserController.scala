@@ -27,7 +27,7 @@ trait UserCtrl extends Controller {
                     InternalServerError
                 }
                 case Right(user) => {
-                    Created(Json.toJson(user))
+                    Created
                 }
             }
         }
