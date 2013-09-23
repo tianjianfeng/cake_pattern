@@ -1,70 +1,67 @@
 package controllers
 
-import play.api._
-import play.api.mvc._
-import services.UserRepositoryComponent
-import services.UserServiceComponent
-import play.api.libs.json.Json
 import scala.concurrent.ExecutionContext.Implicits.global
+import models.User
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import models.User
+import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
-import play.api.libs.json.JsObject
-import play.api.libs.json.Writes
+import services.UserRepositoryComponent
+import services.UserServiceComponent
+import org.joda.time.DateTime
 
 trait UserCtrl extends Controller {
     this: UserServiceComponent with UserRepositoryComponent =>
 
-    def create = Action(parse.json) { implicit request =>
-        Async {
-            dbService.insert((request.body).as[User]) map { either =>
-                either match {
-                    case Left(_) => InternalServerError
-                    case Right(user) => Created
+    def create = Action.async(parse.json) { implicit request =>
+        val json = request.body
+        val user = User(firstname = (json \ "firstname").as[String],
+            lastname = (json \ "lastname").as[String])
+
+        dbService.insert(user) map { either =>
+            either match {
+                case Left(_) => {
+                    InternalServerError
+                }
+                case Right(user) => {
+                    Created(Json.toJson(user))
                 }
             }
         }
     }
 
-    def findOne(id: String) = Action {
+    def findOne(id: String) = Action.async {
         val query = Json.obj("_id" -> BSONObjectID(id))
-        Async {
-            dbService.findOne(query) map {
-                case Some(user) => Ok(Json.toJson(user))
-                case None => NotFound
-            }
+        dbService.findOne(query) map {
+            case Some(user) => Ok(Json.toJson(user))
+            case None => NotFound
         }
     }
 
-    def find(limit: Int, skip: Int) = Action(parse.json) { implicit request =>
+    def find(limit: Int, skip: Int) = Action.async(parse.json) { implicit request =>
         val query = request.body.asInstanceOf[JsObject]
-        Async {
-            dbService.find(query, limit, skip) map { users =>
-                Ok(Json.toJson(users))
-            }
+        dbService.find(query, limit, skip) map { users =>
+            Ok(Json.toJson(users))
         }
     }
-    def update(id: String) = Action(parse.json) { implicit request =>
-        Async {
-            val selector = Json.obj("_id" -> BSONObjectID(id))
-            dbService.updatePartial(selector, request.body.asInstanceOf[JsObject]) map { either =>
-                either match {
-                    case Left(_) => InternalServerError
-                    case Right(user) => Ok
-                }
+    def update(id: String) = Action.async(parse.json) { implicit request =>
+        val selector = Json.obj("_id" -> BSONObjectID(id))
+        dbService.updatePartial(selector, request.body.asInstanceOf[JsObject]) map { either =>
+            either match {
+                case Left(_) => InternalServerError
+                case Right(user) => Ok
             }
         }
     }
 
-    def specific(id: String) = Action {
+    def specific(id: String) = Action.async {
         val query = Json.obj("_id" -> BSONObjectID(id))
-        Async {
-            dbService.specific(query) map {
-                case Some(user) => Ok(Json.toJson(user))
-                case None => NotFound
-            }
+        dbService.specific(query) map {
+            case Some(user) => Ok(Json.toJson(user))
+            case None => NotFound
         }
     }
 }

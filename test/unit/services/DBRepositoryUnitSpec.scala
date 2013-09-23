@@ -13,15 +13,20 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.core.commands.LastError
 import services.DBRepositoryComponent
 import play.api.libs.json.Json
-
+import models.BaseModel
+import org.joda.time.DateTime
+import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json.BSONFormats._
 class DBRepositoryUnitSpec extends Specification with Mockito {
 
-    case class FakeModel(title: String)
-    object FakeModel {
-        implicit val fmt = Json.format[FakeModel]
+    case class TestModel(_id: Option[BSONObjectID] = None,
+            title: String 
+            ) extends BaseModel
+    object TestModel {
+        implicit val fmt = Json.format[TestModel]
     }
 
-    class TestDBRepository extends DBRepositoryComponent[FakeModel] {
+    class TestDBRepository extends DBRepositoryComponent[TestModel] {
         val dbRepository = new DBRepository
         def coll = mock[JSONCollection]
     }
@@ -31,9 +36,9 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
         "return object if the operation is successful" in {
             val operation = Future(LastError(ok = true, err = None, code = None, errMsg = None, originalDocument = None, updated = 1, updatedExisting = true))
             val testDBRepository = new TestDBRepository()
-            val fakeObject = FakeModel(title = "abc")
+            val fakeObject = TestModel(title = "abc")
 
-            val result = testDBRepository.dbRepository.recover[FakeModel](operation)(fakeObject)
+            val result = testDBRepository.dbRepository.recover[TestModel](operation)(fakeObject)
             val futureResult = result map { either =>
                 either match {
                     case Right(result) => result
@@ -45,14 +50,15 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
                 case Success(result) => result must equalTo(fakeObject)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
 
         "return exception if the operation is failed" in {
             val operation = Future(LastError(ok = false, err = Some("field"), code = Some(1), errMsg = Some("mymsg"), originalDocument = None, updated = 0, updatedExisting = false))
             val testDBRepository = new TestDBRepository()
-            val fakeObject = FakeModel(title = "abc")
+            val fakeObject = TestModel(title = "abc")
 
-            val result = testDBRepository.dbRepository.recover[FakeModel](operation)(fakeObject)
+            val result = testDBRepository.dbRepository.recover[TestModel](operation)(fakeObject)
             val futureResult = result map { either =>
                 either match {
                     case Right(_) =>
@@ -61,12 +67,12 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
             }
 
             futureResult onComplete {
-                case Failure(t) => 
+                case Failure(t) =>
                 case Success(msg) => {
                     msg must equalTo("mymsg")
                 }
             }
-
+            1 must equalTo(1)
         }
 
     }

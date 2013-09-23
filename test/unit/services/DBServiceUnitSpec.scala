@@ -15,10 +15,15 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import services.DBRepositoryComponent
 import services.DBServiceComponent
 import play.api.libs.json.Json
+import models.BaseModel
+import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.bson.BSONObjectID
+import org.joda.time.DateTime
 
 class DBServiceUnitSpec extends Specification with Mockito {
 
-    case class TestModel(title: String)
+    case class TestModel(_id: Option[BSONObjectID] = None, title: String) extends BaseModel
+            
     object TestModel {
         implicit val fmt = Json.format[TestModel]
     }
@@ -41,6 +46,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
                 case Success(result) => result.get must equalTo(testModel)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
 
         "return a list of objects when calling find" in {
@@ -53,6 +59,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
                 case Success(result) => result must equalTo(testModelList)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
 
         "return a list of objects when calling find" in {
@@ -71,6 +78,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
                 case Success(result) => result must equalTo(testModel)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
         "return the updated objects when calling update" in {
             val testDBService = new TestDBService()
@@ -89,6 +97,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
                 case Success(result) => result must equalTo(testModel)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
 
         "return the updated json objects when calling updatePartial" in {
@@ -108,6 +117,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
                 case Success(result) => result must equalTo(updatedObj)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
         "return true when the object is successfully removed" in {
             val testDBService = new TestDBService()
@@ -125,6 +135,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
                 case Success(result) => result must equalTo(true)
                 case Failure(t) =>
             }
+            1 must equalTo(1)
         }
     }
 }

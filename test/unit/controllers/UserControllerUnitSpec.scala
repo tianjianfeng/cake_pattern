@@ -2,11 +2,10 @@ package unit.controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import org.mockito.Mockito.when
+import org.mockito.Mockito.doReturn
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
-
 import controllers.UserCtrl
 import models.User
 import play.api.libs.json.Json
@@ -23,6 +22,9 @@ import reactivemongo.bson.BSONObjectID
 import services.ServiceException
 import services.UserRepositoryComponent
 import services.UserServiceComponent
+import play.api.test.Helpers.defaultAwaitTimeout
+import org.joda.time.DateTime
+import org.joda.time.DateTimeUtils
 
 class UserControllerUnitSpec extends Specification with Mockito {
 
@@ -35,13 +37,14 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
         "return CREATED when a user is created successfully" in {
             val controller = new TestController()
+            val (firstname, lastname) = ("testfirstname", "testlastname")
             val json = Json.obj(
-                "firstname" -> "testfirstname",
-                "lastname" -> "testsurname")
+                "firstname" -> firstname,
+                "lastname" -> lastname)
 
-            val user = json.as[User]
-
-            when(controller.dbService.insert(json.as[User])).thenReturn(Future(Right(user)))
+            val user = User(firstname = firstname, lastname = lastname)
+            
+            when(controller.dbService.insert(user)).thenReturn(Future(Right(user)))
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
 
@@ -50,13 +53,14 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
         "return Internal Server Error when a user is NOT created successfully" in {
             val controller = new TestController()
+            val (firstname, lastname) = ("testfirstname", "testlastname")
             val json = Json.obj(
-                "firstname" -> "testfirstname",
-                "lastname" -> "testsurname")
+                "firstname" -> firstname,
+                "lastname" -> lastname)
 
-            val user = json.as[User]
+            val user = User(firstname = firstname, lastname = lastname)
 
-            when(controller.dbService.insert(json.as[User])).thenReturn(Future(Left(any[ServiceException])))
+            when(controller.dbService.insert(user)).thenReturn(Future(Left(any[ServiceException])))
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
 

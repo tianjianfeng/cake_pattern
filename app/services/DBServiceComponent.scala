@@ -3,7 +3,6 @@ package services
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import models.BaseModel
 import play.api.Logger
 import play.api.Play.current
@@ -14,8 +13,11 @@ import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
+import models.User
+import org.joda.time.DateTime
+import play.api.libs.json._
 
-trait DBServiceComponent[T] { this: DBRepositoryComponent[T] =>
+trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
     val dbService: DBService
 
     class DBService {
@@ -43,8 +45,7 @@ trait DBServiceComponent[T] { this: DBRepositoryComponent[T] =>
     }
 }
 
-//trait DBRepositoryComponent[T <: BaseModel] {
-trait DBRepositoryComponent[T] {
+trait DBRepositoryComponent[T <: BaseModel] {
 
     def db = ReactiveMongoPlugin.db
     def coll: JSONCollection
@@ -63,16 +64,22 @@ trait DBRepositoryComponent[T] {
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+    		s.createdDate = Some(DateTime.now)
+    		s.updatedDate = Some(DateTime.now)
+    		println (s.createdDate)
             recover(coll.insert(s)) {
                 s
             }
         }
         def updatePartial(s: JsObject, u: JsObject): Future[Either[ServiceException, JsObject]] = {
+    		u ++ Json.obj("updatedDate" -> DateTime.now)
+    		
             recover(coll.update(s, u)) {
                 u
             }
         }
         def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+    		u.updatedDate = Some(DateTime.now)
             recover(coll.update(s, u)) {
                 u
             }
