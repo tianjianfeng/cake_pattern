@@ -16,14 +16,16 @@ import reactivemongo.core.commands.LastError
 import models.User
 import org.joda.time.DateTime
 import play.api.libs.json._
+import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.bson.BSONObjectID
 
 trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
     val dbService: DBService
 
     class DBService {
 
-        def findOne(query: JsObject)(implicit reader: Reads[T]): Future[Option[T]] = {
-            dbRepository.findOne(query)
+        def findOneById(id: String)(implicit reader: Reads[T]): Future[Option[T]] = {
+            dbRepository.findOneById(id)
         }
 
         def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
@@ -34,16 +36,12 @@ trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
             dbRepository.insert(s.withNewCreatedDate(DateTime.now))
         }
 
-        def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-            dbRepository.update(s, u.withNewUpdatedDate(Some(DateTime.now)))
+        def update(id: String, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+            dbRepository.update(id, u.withNewUpdatedDate(Some(DateTime.now)))
         }
         
-        def updatePartial(s: JsObject, u: JsObject): Future[Either[ServiceException, JsObject]] = {
-            dbRepository.updatePartial(s, u)
-        }
-
-        def remove(query: JsObject): Future[Either[ServiceException, Boolean]] = {
-            dbRepository.remove(query)
+        def remove(id: String): Future[Either[ServiceException, Boolean]] = {
+            dbRepository.remove(id)
         }
     }
 }
@@ -58,7 +56,8 @@ trait DBRepositoryComponent[T <: BaseModel[T]] {
     class DBRepository {
         implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-        def findOne(query: JsObject)(implicit reader: Reads[T]): Future[Option[T]] = {
+        def findOneById(id: String)(implicit reader: Reads[T]): Future[Option[T]] = {
+            val query = Json.obj("_id" -> BSONObjectID(id))
             coll.find(query).one[T]
         }
 
@@ -73,23 +72,16 @@ trait DBRepositoryComponent[T <: BaseModel[T]] {
             }
         }
 
-        def updatePartial(s: JsObject, u: JsObject): Future[Either[ServiceException, JsObject]] = {
-    		val updated = u ++ Json.obj("updatedDate" -> DateTime.now)
-    		
-            recover(coll.update(s, Json.obj("$set" -> updated))) {
-                updated
-            }
-        }
-
-        def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-
+        def update(id: String, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+    		val selector = Json.obj("_id" -> id)
     		val updated = Json.obj("$set" -> u)
-            recover(coll.update(s, updated)) {
+            recover(coll.update(selector, updated)) {
                 u
             }
         }
 
-        def remove(query: JsObject): Future[Either[ServiceException, Boolean]] = {
+        def remove(id: String): Future[Either[ServiceException, Boolean]] = {
+            val query = Json.obj("_id" -> BSONObjectID(id))
             recover(coll.remove(query)) {
                 true
             }

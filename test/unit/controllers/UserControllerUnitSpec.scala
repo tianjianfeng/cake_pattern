@@ -73,10 +73,9 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = "abc", lastname = "edf")
 
-            val selector = Json.obj("_id" -> BSONObjectID(id))
-            when(controller.dbService.findOne(selector)).thenReturn(Future(Some(user)))
+            when(controller.dbService.findOneById(id)).thenReturn(Future(Some(user)))
             val req = FakeRequest()
-            val result = controller.findOne(id)(req)
+            val result = controller.findOneById(id)(req)
 
             status(result) mustEqual OK
             contentType(result) must beSome("application/json")
@@ -103,14 +102,16 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val controller = new TestController()
             val id = "523adf223386b69b47c63431"
 
+            val (firstname, lastname) = ("testfirstname", "testlastname")
             val json = Json.obj(
-                "firstname" -> "update",
-                "lastname" -> "update")
+                "firstname" -> firstname,
+                "lastname" -> lastname)
 
-            val selector = Json.obj("_id" -> BSONObjectID(id))
-            when(controller.dbService.updatePartial(selector, json)).thenReturn(Future(Right(json)))
+            val user = User(firstname=firstname, lastname=lastname)
+            
+            when(controller.dbService.update(id, user)).thenReturn(Future(Right(user)))
             val req = FakeRequest().withBody(json)
-            val result = controller.updatePartial(id)(req)
+            val result = controller.update(id)(req)
 
             status(result) mustEqual OK
         }

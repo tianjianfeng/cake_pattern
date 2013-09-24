@@ -46,11 +46,11 @@ class DBServiceUnitSpec extends Specification with Mockito {
 
         "return one object when send the query to the repository" in {
             val testDBService = new TestDBService()
-            val query = mock[JsObject]
+            val id = "id"
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.findOne(query)).thenReturn(Future(Some(testModel)))
-            testDBService.dbService.findOne(query) onComplete {
+            when(testDBService.dbRepository.findOneById(id)).thenReturn(Future(Some(testModel)))
+            testDBService.dbService.findOneById(id) onComplete {
                 case Success(result) => result.get must equalTo(testModel)
                 case Failure(t) =>
             }
@@ -91,12 +91,12 @@ class DBServiceUnitSpec extends Specification with Mockito {
 
         "return the updated objects when calling update" in {
             val testDBService = new TestDBService()
-            val selector = mock[JsObject]
+            val id = "id"
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.update(selector, testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Right(testModel)))
+            when(testDBService.dbRepository.update(id, testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Right(testModel)))
 
-            val futureResult = testDBService.dbService.update(selector, testModel) map { either =>
+            val futureResult = testDBService.dbService.update(id, testModel) map { either =>
                 either match {
                     case Right(result) => result
                     case Left(_) =>
@@ -109,33 +109,14 @@ class DBServiceUnitSpec extends Specification with Mockito {
             1 must equalTo(1)
         }
 
-        "return the updated json objects when calling updatePartial" in {
-            val testDBService = new TestDBService()
-            val selector = mock[JsObject]
-            val updatedObj = mock[JsObject]
-
-            when(testDBService.dbRepository.updatePartial(selector, updatedObj)).thenReturn(Future(Right(updatedObj)))
-
-            val futureResult = testDBService.dbService.updatePartial(selector, updatedObj) map { either =>
-                either match {
-                    case Right(result) => result
-                    case Left(_) =>
-                }
-            }
-            futureResult onComplete {
-                case Success(result) => result must equalTo(updatedObj)
-                case Failure(t) =>
-            }
-            1 must equalTo(1)
-        }
         
         "return true when the object is successfully removed" in {
             val testDBService = new TestDBService()
-            val selector = mock[JsObject]
+            val id = "id"
 
-            when(testDBService.dbRepository.remove(selector)).thenReturn(Future(Right(true)))
+            when(testDBService.dbRepository.remove(id)).thenReturn(Future(Right(true)))
 
-            val futureResult = testDBService.dbService.remove(selector) map { either =>
+            val futureResult = testDBService.dbService.remove(id) map { either =>
                 either match {
                     case Right(result) => result
                     case Left(_) =>

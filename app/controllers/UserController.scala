@@ -12,6 +12,7 @@ import reactivemongo.bson.BSONObjectID
 import services.UserRepositoryComponent
 import services.UserServiceComponent
 import org.joda.time.DateTime
+import scala.concurrent.Future
 
 trait UserCtrl extends Controller {
     this: UserServiceComponent with UserRepositoryComponent =>
@@ -35,9 +36,8 @@ trait UserCtrl extends Controller {
         }
     }
 
-    def findOne(id: String) = Action.async {
-        val query = Json.obj("_id" -> BSONObjectID(id))
-        dbService.findOne(query) map {
+    def findOneById(id: String) = Action.async {
+        dbService.findOneById(id) map {
             case Some(user) => Ok(Json.toJson(user))
             case None => NotFound
         }
@@ -50,13 +50,20 @@ trait UserCtrl extends Controller {
         }
     }
     
-    def updatePartial(id: String) = Action.async(parse.json) { implicit request =>
+    def update(id: String) = Action.async(parse.json) { implicit request =>
         val selector = Json.obj("_id" -> BSONObjectID(id))
-        dbService.updatePartial(selector, request.body.asInstanceOf[JsObject]) map { either =>
-            either match {
-                case Left(_) => InternalServerError
-                case Right(user) => Ok
+        
+        dbService.findOneById(id) flatMap {
+            case Some(user) => {
+                val updated = request.body.as[User].copy(createdDate = user.createdDate)
+                dbService.update(id, updated) map { either =>
+                    either match {
+                        case Left(_) => InternalServerError
+                        case Right(user) => Ok
+                    }
+                } 
             }
+            case None => Future(NotFound)
         }
     }
 
