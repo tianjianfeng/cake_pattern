@@ -28,10 +28,5 @@ trait UserRepositoryComponent extends DBRepositoryComponent[User]{
     
     def coll: JSONCollection = db[JSONCollection]("users")
 
-    class UserRepository extends DBRepository {
-        
-        def specific(query: JsObject): Future[Option[User]] = { 
-            coll.find(query).one[User]
-        }
-    }
+    class UserRepository extends DBRepository
 }

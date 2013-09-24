@@ -17,12 +17,19 @@ import models.BaseModel
 import org.joda.time.DateTime
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
+
 class DBRepositoryUnitSpec extends Specification with Mockito {
 
-    case class TestModel(_id: Option[BSONObjectID] = None,
+    case class TestModel(
         title: String,
-        override var createdDate: Option[DateTime] = None,
-        override var updatedDate: Option[DateTime] = None) extends BaseModel
+        _id: Option[BSONObjectID] = None,
+        createdDate: DateTime = DateTime.now,
+        updatedDate: Option[DateTime] = None) extends BaseModel[TestModel] {
+
+        def withNewCreatedDate(newCreatedDate: DateTime): TestModel = this.copy(createdDate = newCreatedDate)
+        def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
+
+    }
         
     object TestModel {
         implicit val fmt = Json.format[TestModel]

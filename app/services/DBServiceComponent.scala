@@ -17,7 +17,7 @@ import models.User
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
+trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
     val dbService: DBService
 
     class DBService {
@@ -31,21 +31,24 @@ trait DBServiceComponent[T <: BaseModel] { this: DBRepositoryComponent[T] =>
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-            dbRepository.insert(s)
+            dbRepository.insert(s.withNewCreatedDate(DateTime.now))
         }
+
+        def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+            dbRepository.update(s, u.withNewUpdatedDate(Some(DateTime.now)))
+        }
+        
         def updatePartial(s: JsObject, u: JsObject): Future[Either[ServiceException, JsObject]] = {
             dbRepository.updatePartial(s, u)
         }
-        def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-            dbRepository.update(s, u)
-        }
+
         def remove(query: JsObject): Future[Either[ServiceException, Boolean]] = {
             dbRepository.remove(query)
         }
     }
 }
 
-trait DBRepositoryComponent[T <: BaseModel] {
+trait DBRepositoryComponent[T <: BaseModel[T]] {
 
     def db = ReactiveMongoPlugin.db
     def coll: JSONCollection
@@ -58,19 +61,18 @@ trait DBRepositoryComponent[T <: BaseModel] {
         def findOne(query: JsObject)(implicit reader: Reads[T]): Future[Option[T]] = {
             coll.find(query).one[T]
         }
+
         def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
             val cursor = coll.find(sel).options(QueryOpts().skip(skip)).cursor[T]
             if (limit != 0) cursor.toList(limit) else cursor.toList
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-    		s.createdDate = Some(DateTime.now)
-    		s.updatedDate = Some(DateTime.now)
-    		println (s.createdDate)
             recover(coll.insert(s)) {
                 s
             }
         }
+
         def updatePartial(s: JsObject, u: JsObject): Future[Either[ServiceException, JsObject]] = {
     		val updated = u ++ Json.obj("updatedDate" -> DateTime.now)
     		
@@ -78,13 +80,15 @@ trait DBRepositoryComponent[T <: BaseModel] {
                 updated
             }
         }
+
         def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-    		u.updatedDate = Some(DateTime.now)
+
     		val updated = Json.obj("$set" -> u)
             recover(coll.update(s, updated)) {
                 u
             }
         }
+
         def remove(query: JsObject): Future[Either[ServiceException, Boolean]] = {
             recover(coll.remove(query)) {
                 true
