@@ -22,9 +22,15 @@ import org.joda.time.DateTime
 
 class DBServiceUnitSpec extends Specification with Mockito {
 
-    case class TestModel(_id: Option[BSONObjectID] = None, title: String,
-        override var createdDate: Option[DateTime] = None,
-        override var updatedDate: Option[DateTime] = None) extends BaseModel
+    case class TestModel(
+        _id: Option[BSONObjectID] = None, 
+        title: String,
+        createdDate: DateTime = DateTime.now,
+        updatedDate: Option[DateTime] = None) extends BaseModel[TestModel] {
+
+        def withNewCreatedDate(newCreatedDate: DateTime): TestModel = this.copy(createdDate = newCreatedDate)
+        def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
+    }
 
     object TestModel {
         implicit val fmt = Json.format[TestModel]
@@ -82,6 +88,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
             }
             1 must equalTo(1)
         }
+
         "return the updated objects when calling update" in {
             val testDBService = new TestDBService()
             val selector = mock[JsObject]
@@ -121,6 +128,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
             }
             1 must equalTo(1)
         }
+        
         "return true when the object is successfully removed" in {
             val testDBService = new TestDBService()
             val selector = mock[JsObject]
