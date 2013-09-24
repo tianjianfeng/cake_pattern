@@ -13,6 +13,7 @@ case class DBServiceException(
     nestedException: Throwable = null) extends ServiceException
 
 object DBServiceException {
+	
     def apply(lastError: LastError): ServiceException = {
         DBServiceException(lastError.errMsg.getOrElse(lastError.message), Some(lastError))
     }

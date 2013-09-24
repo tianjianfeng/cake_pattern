@@ -110,7 +110,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val selector = Json.obj("_id" -> BSONObjectID(id))
             when(controller.dbService.updatePartial(selector, json)).thenReturn(Future(Right(json)))
             val req = FakeRequest().withBody(json)
-            val result = controller.update(id)(req)
+            val result = controller.updatePartial(id)(req)
 
             status(result) mustEqual OK
         }

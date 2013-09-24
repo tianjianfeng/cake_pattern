@@ -6,9 +6,11 @@ import play.api.libs.json.Json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-trait BaseModel {
-    def _id: Option[BSONObjectID]
-    var createdDate: Option[DateTime] = None
-    var updatedDate: Option[DateTime] = None
+abstract class BaseModel[T] {
+	val _id: Option[BSONObjectID]
+	val createdDate: DateTime
+	val updatedDate: Option[DateTime]
+	
+	def withNewCreatedDate(createdDate: DateTime): T
+	def withNewUpdatedDate(updatedDate: Option[DateTime]): T
 }
-
