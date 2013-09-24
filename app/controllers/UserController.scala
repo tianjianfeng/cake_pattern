@@ -20,7 +20,9 @@ trait UserCtrl extends Controller {
         val json = request.body
         val user = User(firstname = (json \ "firstname").as[String],
             lastname = (json \ "lastname").as[String])
-
+            
+            println ("user: " + user)
+            
         dbService.insert(user) map { either =>
             either match {
                 case Left(_) => {
@@ -58,13 +60,13 @@ trait UserCtrl extends Controller {
         }
     }
 
-    def specific(id: String) = Action.async {
-        val query = Json.obj("_id" -> BSONObjectID(id))
-        dbService.specific(query) map {
-            case Some(user) => Ok(Json.toJson(user))
-            case None => NotFound
-        }
-    }
+//    def specific(id: String) = Action.async {
+//        val query = Json.obj("_id" -> BSONObjectID(id))
+//        dbService.specific(query) map {
+//            case Some(user) => Ok(Json.toJson(user))
+//            case None => NotFound
+//        }
+//    }
 }
 
 object UserController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {

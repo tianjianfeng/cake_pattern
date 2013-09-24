@@ -70,11 +70,11 @@ class DBServiceUnitSpec extends Specification with Mockito {
             1 must equalTo(1)
         }
 
-        "return a list of objects when calling find" in {
+        "return the inserted objects when calling insert" in {
             val testDBService = new TestDBService()
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.insert(testModel)).thenReturn(Future(Right(testModel)))
+            when(testDBService.dbRepository.insert(testModel.withNewCreatedDate(any[DateTime]))).thenReturn(Future(Right(testModel)))
 
             val futureResult = testDBService.dbService.insert(testModel) map { either =>
                 either match {
@@ -94,7 +94,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val selector = mock[JsObject]
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.update(selector, testModel)).thenReturn(Future(Right(testModel)))
+            when(testDBService.dbRepository.update(selector, testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Right(testModel)))
 
             val futureResult = testDBService.dbService.update(selector, testModel) map { either =>
                 either match {

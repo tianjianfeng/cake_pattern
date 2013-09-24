@@ -17,7 +17,7 @@ trait UserServiceComponent extends DBServiceComponent[User] { this: UserReposito
 
     class UserService extends DBService {
         def specific(query: JsObject) = {
-            dbRepository.specific(query)
+//            dbRepository.specific(query)
         }
     }
 }
