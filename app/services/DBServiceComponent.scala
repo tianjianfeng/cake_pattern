@@ -72,15 +72,16 @@ trait DBRepositoryComponent[T <: BaseModel] {
             }
         }
         def updatePartial(s: JsObject, u: JsObject): Future[Either[ServiceException, JsObject]] = {
-    		u ++ Json.obj("updatedDate" -> DateTime.now)
+    		val updated = u ++ Json.obj("updatedDate" -> DateTime.now)
     		
-            recover(coll.update(s, u)) {
-                u
+            recover(coll.update(s, Json.obj("$set" -> updated))) {
+                updated
             }
         }
         def update(s: JsObject, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
     		u.updatedDate = Some(DateTime.now)
-            recover(coll.update(s, u)) {
+    		val updated = Json.obj("$set" -> u)
+            recover(coll.update(s, updated)) {
                 u
             }
         }

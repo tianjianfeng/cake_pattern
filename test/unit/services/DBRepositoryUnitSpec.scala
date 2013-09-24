@@ -20,8 +20,10 @@ import play.modules.reactivemongo.json.BSONFormats._
 class DBRepositoryUnitSpec extends Specification with Mockito {
 
     case class TestModel(_id: Option[BSONObjectID] = None,
-            title: String 
-            ) extends BaseModel
+        title: String,
+        override var createdDate: Option[DateTime] = None,
+        override var updatedDate: Option[DateTime] = None) extends BaseModel
+        
     object TestModel {
         implicit val fmt = Json.format[TestModel]
     }

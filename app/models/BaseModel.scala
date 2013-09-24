@@ -8,7 +8,7 @@ import play.api.libs.functional.syntax._
 
 trait BaseModel {
     def _id: Option[BSONObjectID]
-    var createdDate: Option[DateTime] = None
-    var updatedDate: Option[DateTime] = None
+    var createdDate: Option[DateTime]
+    var updatedDate: Option[DateTime]
 }
 

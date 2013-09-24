@@ -22,8 +22,10 @@ import org.joda.time.DateTime
 
 class DBServiceUnitSpec extends Specification with Mockito {
 
-    case class TestModel(_id: Option[BSONObjectID] = None, title: String) extends BaseModel
-            
+    case class TestModel(_id: Option[BSONObjectID] = None, title: String,
+        override var createdDate: Option[DateTime] = None,
+        override var updatedDate: Option[DateTime] = None) extends BaseModel
+
     object TestModel {
         implicit val fmt = Json.format[TestModel]
     }

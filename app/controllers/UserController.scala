@@ -47,7 +47,7 @@ trait UserCtrl extends Controller {
             Ok(Json.toJson(users))
         }
     }
-    def update(id: String) = Action.async(parse.json) { implicit request =>
+    def updatePartial(id: String) = Action.async(parse.json) { implicit request =>
         val selector = Json.obj("_id" -> BSONObjectID(id))
         dbService.updatePartial(selector, request.body.asInstanceOf[JsObject]) map { either =>
             either match {
