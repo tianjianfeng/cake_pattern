@@ -18,13 +18,16 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
+import scala.util.Success
+import scala.util.Failure
+import scala.concurrent.{ future, promise }
 
 trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
     val dbService: DBService
 
     class DBService {
 
-        def findOneById(id: String)(implicit reader: Reads[T]): Future[Option[T]] = {
+        def findOneById(id: String)(implicit reader: Reads[T]): Future[Either[ServiceException, Option[T]]] = {
             dbRepository.findOneById(id)
         }
 
@@ -33,13 +36,13 @@ trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-            dbRepository.insert(s.withNewCreatedDate(DateTime.now))
+            dbRepository.insert(s)
         }
 
-        def update(id: String, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-            dbRepository.update(id, u.withNewUpdatedDate(Some(DateTime.now)))
+        def update(u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+            dbRepository.update(u.withNewUpdatedDate(Some(DateTime.now)))
         }
-        
+
         def remove(id: String): Future[Either[ServiceException, Boolean]] = {
             dbRepository.remove(id)
         }
@@ -56,9 +59,25 @@ trait DBRepositoryComponent[T <: BaseModel[T]] {
     class DBRepository {
         implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-        def findOneById(id: String)(implicit reader: Reads[T]): Future[Option[T]] = {
-            val query = Json.obj("_id" -> BSONObjectID(id))
-            coll.find(query).one[T]
+        def findOneById(id: String)(implicit reader: Reads[T]): Future[Either[ServiceException, Option[T]]] = {
+            constructBsonId(id) match {
+                case Right(bsonObjectId) => {
+                    val query = Json.obj("_id" -> bsonObjectId)
+
+                    val jsvalue = coll.find(query).one[JsValue]
+                    val optUser = for (js <- jsvalue) yield js.get.asOpt[T]
+
+                    val p = promise[Either[ServiceException, Option[T]]]
+                    optUser onComplete {
+                        case Success(result) =>
+                            p success Right(result)
+                        case Failure(t) =>
+                            p success Left(BSONObjectIDException(t.getMessage(), t))
+                    }
+                    p.future
+                }
+                case Left(e) => Future(Left(e))
+            }
         }
 
         def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
@@ -72,18 +91,25 @@ trait DBRepositoryComponent[T <: BaseModel[T]] {
             }
         }
 
-        def update(id: String, u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-    		val selector = Json.obj("_id" -> id)
-    		val updated = Json.obj("$set" -> u)
+        def update(u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+            val jsObject = Json.toJson(u).as[JsObject] - ("_id")
+            val updated = Json.obj("$set" -> jsObject)
+
+            val selector = Json.obj("_id" -> u._id.get)
             recover(coll.update(selector, updated)) {
                 u
             }
         }
 
         def remove(id: String): Future[Either[ServiceException, Boolean]] = {
-            val query = Json.obj("_id" -> BSONObjectID(id))
-            recover(coll.remove(query)) {
-                true
+            constructBsonId(id) match {
+                case Right(bsonObjectId) => {
+                    val query = Json.obj("_id" -> bsonObjectId)
+                    recover(coll.remove(query)) {
+                        true
+                    }
+                }
+                case Left(e) => Future(Left(e))
             }
         }
 
@@ -99,6 +125,15 @@ trait DBRepositoryComponent[T <: BaseModel[T]] {
                             Right(success)
                         }
                     }
+            }
+        }
+        def constructBsonId(id: String): Either[BSONObjectIDException, BSONObjectID] = {
+            try {
+                Right(BSONObjectID(id))
+            } catch {
+                case (e: NumberFormatException) => Left(BSONObjectIDException(e.getMessage(), e))
+                case (e: IllegalArgumentException) => Left(BSONObjectIDException(e.getMessage(), e))
+                case (e: Exception) => Left(BSONObjectIDException(e.getMessage(), e))
             }
         }
     }

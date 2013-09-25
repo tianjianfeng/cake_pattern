@@ -21,25 +21,26 @@ trait UserCtrl extends Controller {
         val json = request.body
         val user = User(firstname = (json \ "firstname").as[String],
             lastname = (json \ "lastname").as[String])
-            
-            println ("user: " + user)
-            
-        dbService.insert(user) map { either =>
-            either match {
-                case Left(_) => {
-                    InternalServerError
-                }
-                case Right(user) => {
-                    Created(Json.toJson(user))
-                }
+
+        dbService.insert(user) map {
+            case Left(_) => {
+                InternalServerError
+            }
+            case Right(user) => {
+                Created(Json.toJson(user))
             }
         }
     }
 
     def findOneById(id: String) = Action.async {
         dbService.findOneById(id) map {
-            case Some(user) => Ok(Json.toJson(user))
-            case None => NotFound
+            case Left(_) => BadRequest
+            case Right(optionUser) => {
+                optionUser match {
+                    case Some(user) => Ok(Json.toJson(user))
+                    case None => NotFound
+                }
+            }
         }
     }
 
@@ -49,31 +50,36 @@ trait UserCtrl extends Controller {
             Ok(Json.toJson(users))
         }
     }
-    
+
     def update(id: String) = Action.async(parse.json) { implicit request =>
-        val selector = Json.obj("_id" -> BSONObjectID(id))
-        
+
         dbService.findOneById(id) flatMap {
-            case Some(user) => {
-                val updated = request.body.as[User].copy(createdDate = user.createdDate)
-                dbService.update(id, updated) map { either =>
-                    either match {
-                        case Left(_) => InternalServerError
-                        case Right(user) => Ok
+            case Left(e) => Future(BadRequest)
+            case Right(optionUser) => {
+                optionUser match {
+                    case None => Future(NotFound)
+                    case Some(user) => {
+                        val json = request.body
+                        val updated = user.copy(firstname= (json \ "firstname").as[String], lastname=(json \ "lastname").as[String])
+                        dbService.update(updated) map { either =>
+                            either match {
+                                case Left(_) => InternalServerError
+                                case Right(user) => Ok
+                            }
+                        }
                     }
-                } 
+                }
             }
-            case None => Future(NotFound)
         }
     }
 
-//    def specific(id: String) = Action.async {
-//        val query = Json.obj("_id" -> BSONObjectID(id))
-//        dbService.specific(query) map {
-//            case Some(user) => Ok(Json.toJson(user))
-//            case None => NotFound
-//        }
-//    }
+    //    def specific(id: String) = Action.async {
+    //        val query = Json.obj("_id" -> BSONObjectID(id))
+    //        dbService.specific(query) map {
+    //            case Some(user) => Ok(Json.toJson(user))
+    //            case None => NotFound
+    //        }
+    //    }
 }
 
 object UserController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
