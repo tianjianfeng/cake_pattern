@@ -23,7 +23,7 @@ import org.joda.time.DateTime
 class DBServiceUnitSpec extends Specification with Mockito {
 
     case class TestModel(
-        _id: Option[BSONObjectID] = None, 
+        _id: Option[BSONObjectID] = None,
         title: String,
         createdDate: DateTime = DateTime.now,
         updatedDate: Option[DateTime] = None) extends BaseModel[TestModel] {
@@ -49,9 +49,9 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val id = "id"
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.findOneById(id)).thenReturn(Future(Some(testModel)))
+            when(testDBService.dbRepository.findOneById(id)).thenReturn(Future(Right(Some(testModel))))
             testDBService.dbService.findOneById(id) onComplete {
-                case Success(result) => result.get must equalTo(testModel)
+                case Success(either) => either.right.get must equalTo(testModel)
                 case Failure(t) =>
             }
             1 must equalTo(1)
@@ -94,9 +94,9 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val id = "id"
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.update(id, testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Right(testModel)))
+            when(testDBService.dbRepository.update(testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Right(testModel)))
 
-            val futureResult = testDBService.dbService.update(id, testModel) map { either =>
+            val futureResult = testDBService.dbService.update(testModel) map { either =>
                 either match {
                     case Right(result) => result
                     case Left(_) =>
@@ -109,7 +109,6 @@ class DBServiceUnitSpec extends Specification with Mockito {
             1 must equalTo(1)
         }
 
-        
         "return true when the object is successfully removed" in {
             val testDBService = new TestDBService()
             val id = "id"
