@@ -9,7 +9,6 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.format.Formats._
 import play.api.data.validation.Constraints._
-import reactivemongo.bson._
 
 case class User (
     _id: Option[BSONObjectID] = None,
@@ -18,7 +17,8 @@ case class User (
     createdDate: DateTime = DateTime.now,
     updatedDate: Option[DateTime] = None
     ) extends BaseModel[User] {
-
+    
+    
 	def withNewCreatedDate(newCreatedDate: DateTime): User = this.copy(createdDate = newCreatedDate)
 	def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): User = this.copy(updatedDate = newUpdatedDate)
 }
