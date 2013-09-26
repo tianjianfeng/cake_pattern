@@ -39,8 +39,13 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val controller = new TestController()
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
+<<<<<<< HEAD
+            val user = mock[User]
+            
+=======
             val user = User(firstname = firstname,lastname = lastname)
 
+>>>>>>> fc3381a99003b03562b209a45621edc1d1350aba
             when(controller.dbService.insert(user)).thenReturn(Future(Right(user)))
             
             val json = Json.obj(

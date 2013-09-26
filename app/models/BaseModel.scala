@@ -1,15 +1,14 @@
 package models
 
-import reactivemongo.bson.BSONObjectID
-import org.joda.time.DateTime
-import play.api.libs.json.Json
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
 
-abstract class BaseModel[T] {
-	val _id: Option[BSONObjectID]
+import org.joda.time.DateTime
+
+abstract class BaseModel[T, U] {
+	val id: Option[String]
 	val createdDate: DateTime
 	val updatedDate: Option[DateTime]
+	val status: U
 	
 	def withNewCreatedDate(createdDate: DateTime): T
 	def withNewUpdatedDate(updatedDate: Option[DateTime]): T

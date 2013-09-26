@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
 import play.Project._
+
 import de.johoop.jacoco4sbt._
 import JacocoPlugin._
 
@@ -8,11 +9,19 @@ object ApplicationBuild extends Build {
 
     val appName = "cake_pattern"
     val appVersion = "1.0-SNAPSHOT"
-        
-    lazy val jacoco_settings = Defaults.defaultSettings ++ Seq(jacoco.settings: _*)
 
-    val main = play.Project(appName, appVersion, Seq(), settings = jacoco_settings).settings(
-        //        resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+    val appDependencies = Seq(
+        "org.mockito" % "mockito-all" % "1.9.5",
+        "org.jacoco" % "org.jacoco.core" % "0.6.3.201306030806",
+        "org.jacoco" % "org.jacoco.report" % "0.6.3.201306030806",
+        "org.reactivemongo" %% "play2-reactivemongo" % "0.10.0-SNAPSHOT"
+    )
+     
+    lazy val jacoco_settings = Seq(jacoco.settings: _*)
+   
+    val main = play.Project(appName, appVersion, appDependencies, settings = jacoco_settings).settings(
+
+        // resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
 
         parallelExecution in jacoco.Config := false,
         jacoco.reportFormats in jacoco.Config := Seq(XMLReport("utf-8"), HTMLReport("utf-8")),

@@ -3,7 +3,7 @@ package services
 import scala.concurrent.Future
 
 import models.User
-import play.api.libs.json.JsObject
+import models.UserStatus
 import play.modules.reactivemongo.json.collection.JSONCollection
 
 object UserComponentRegistry extends UserServiceComponent with UserRepositoryComponent {
@@ -11,18 +11,14 @@ object UserComponentRegistry extends UserServiceComponent with UserRepositoryCom
     val dbService = new UserService
 }
 
-trait UserServiceComponent extends DBServiceComponent[User] { this: UserRepositoryComponent =>
+trait UserServiceComponent extends DBServiceComponent[User, UserStatus.Value] { this: UserRepositoryComponent =>
 
     val dbService: UserService
 
-    class UserService extends DBService {
-        def specific(query: JsObject) = {
-//            dbRepository.specific(query)
-        }
-    }
+    class UserService extends DBService
 }
 
-trait UserRepositoryComponent extends DBRepositoryComponent[User]{
+trait UserRepositoryComponent extends DBRepositoryComponent[User, UserStatus.Value]{
 
     val dbRepository: UserRepository
     

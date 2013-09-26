@@ -44,9 +44,8 @@ trait UserCtrl extends Controller {
         }
     }
 
-    def find(limit: Int, skip: Int) = Action.async(parse.json) { implicit request =>
-        val query = request.body.asInstanceOf[JsObject]
-        dbService.find(query, limit, skip) map { users =>
+    def all = Action.async { implicit request =>
+        dbService.all map { users =>
             Ok(Json.toJson(users))
         }
     }
