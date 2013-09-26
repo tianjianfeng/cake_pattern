@@ -2,11 +2,10 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-POST 	/users					controllers.UserController.create
+POST	/users					controllers.UserController.create
 GET		/users/:id				controllers.UserController.findOneById(id: String)
-POST		/users/find			controllers.UserController.find(limit: Int ?= 0, skip: Int ?=0)
+GET		/users					controllers.UserController.all
 PUT		/users/:id				controllers.UserController.update(id: String)
-#GET		/users/specific/:id				controllers.UserController.specific(id: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET		/assets/*file			controllers.Assets.at(path="/public", file)

@@ -1,38 +1,40 @@
 package services
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import models.BaseModel
-import play.api.Logger
+
 import play.api.Play.current
-import play.api.libs.json.JsObject
-import play.api.libs.json.Reads
-import play.api.libs.json.Writes
+import play.api.Logger
+import play.api.libs.json._
+
+import org.joda.time.DateTime
+
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.json.BSONFormats._
+
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
-import models.User
-import org.joda.time.DateTime
-import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONFormats._
+
 import reactivemongo.bson.BSONObjectID
 import scala.util.Success
 import scala.util.Failure
 import scala.concurrent.{ future, promise }
 
-trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
-    val dbService: DBService
+import models.BaseModel
 
-    class DBService {
+trait DBServiceComponent[T <: BaseModel[T, U], U] {
+	this: DBRepositoryComponent[T, U] =>
+	val dbService: DBService
+
+	class DBService {
 
         def findOneById(id: String)(implicit reader: Reads[T]): Future[Either[ServiceException, Option[T]]] = {
             dbRepository.findOneById(id)
         }
 
-        def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
-            dbRepository.find(sel, limit, skip)
+        def all()(implicit reader: Reads[T]): Future[Seq[T]] = {
+            dbRepository.find( Json.obj(), 0, 0)
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
@@ -49,7 +51,7 @@ trait DBServiceComponent[T <: BaseModel[T]] { this: DBRepositoryComponent[T] =>
     }
 }
 
-trait DBRepositoryComponent[T <: BaseModel[T]] {
+trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
 
     def db = ReactiveMongoPlugin.db
     def coll: JSONCollection
@@ -95,7 +97,7 @@ trait DBRepositoryComponent[T <: BaseModel[T]] {
             val jsObject = Json.toJson(u).as[JsObject] - ("_id")
             val updated = Json.obj("$set" -> jsObject)
 
-            val selector = Json.obj("_id" -> u._id.get)
+            val selector = Json.obj("_id" -> u.id.get)
             recover(coll.update(selector, updated)) {
                 u
             }
