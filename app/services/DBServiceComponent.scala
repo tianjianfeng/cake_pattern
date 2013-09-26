@@ -33,8 +33,8 @@ trait DBServiceComponent[T <: BaseModel[T, U], U] {
             dbRepository.findOneById(id)
         }
 
-        def all()(implicit reader: Reads[T]): Future[Seq[T]] = {
-            dbRepository.find( Json.obj(), 0, 0)
+        def all(limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
+            dbRepository.find( Json.obj(), limit, skip)
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
@@ -94,10 +94,10 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
         }
 
         def update(u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
-            val jsObject = Json.toJson(u).as[JsObject] - ("_id")
+            val jsObject = Json.toJson(u).as[JsObject] - ("id")
             val updated = Json.obj("$set" -> jsObject)
 
-            val selector = Json.obj("_id" -> u.id.get)
+            val selector = Json.obj("_id" -> BSONObjectID(u.id.get))
             recover(coll.update(selector, updated)) {
                 u
             }
@@ -106,7 +106,7 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
         def remove(id: String): Future[Either[ServiceException, Boolean]] = {
             constructBsonId(id) match {
                 case Right(bsonObjectId) => {
-                    val query = Json.obj("_id" -> bsonObjectId)
+                    val query = Json.obj("id" -> bsonObjectId)
                     recover(coll.remove(query)) {
                         true
                     }

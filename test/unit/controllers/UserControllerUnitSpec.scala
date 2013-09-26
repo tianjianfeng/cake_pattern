@@ -39,13 +39,8 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val controller = new TestController()
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
-<<<<<<< HEAD
-            val user = mock[User]
-            
-=======
             val user = User(firstname = firstname,lastname = lastname)
 
->>>>>>> fc3381a99003b03562b209a45621edc1d1350aba
             when(controller.dbService.insert(user)).thenReturn(Future(Right(user)))
             
             val json = Json.obj(
@@ -92,13 +87,12 @@ class UserControllerUnitSpec extends Specification with Mockito {
         "return OK with a list of users as json when finding users with skip and limit" in {
             val controller = new TestController()
 
-            val selector = Json.obj()
             val (limit, skip) = (0, 0)
             val users = Seq(User(firstname = "abc", lastname = "def"), User(firstname = "123", lastname = "456"))
-            when(controller.dbService.find(selector, limit, skip)).thenReturn(Future(users))
+            when(controller.dbService.all(limit, skip)).thenReturn(Future(users))
 
-            val req = FakeRequest().withBody(selector)
-            val result = controller.find(limit, skip)(req)
+            val req = FakeRequest()
+            val result = controller.all(limit, skip)(req)
 
             status(result) mustEqual OK
             contentType(result) must beSome("application/json")
@@ -113,7 +107,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
                 "firstname" -> firstname,
                 "lastname" -> lastname)
 
-            val user = User(_id= Some(BSONObjectID("523adf223386b69b47c63431")), firstname = firstname, lastname = lastname)
+            val user = User(id= Some(id), firstname = firstname, lastname = lastname)
 
             when(controller.dbService.update(user)).thenReturn(Future(Right(user)))
             val req = FakeRequest().withBody(json)

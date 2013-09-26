@@ -44,8 +44,8 @@ trait UserCtrl extends Controller {
         }
     }
 
-    def all = Action.async { implicit request =>
-        dbService.all map { users =>
+    def all(limit: Int, skip: Int) = Action.async { implicit request =>
+        dbService.all (limit, skip) map { users =>
             Ok(Json.toJson(users))
         }
     }
@@ -59,7 +59,7 @@ trait UserCtrl extends Controller {
                     case None => Future(NotFound)
                     case Some(user) => {
                         val json = request.body
-                        val updated = user.copy(firstname= (json \ "firstname").as[String], lastname=(json \ "lastname").as[String])
+                        val updated = user.copy(id=Some(id), firstname= (json \ "firstname").as[String], lastname=(json \ "lastname").as[String])
                         dbService.update(updated) map { either =>
                             either match {
                                 case Left(_) => InternalServerError

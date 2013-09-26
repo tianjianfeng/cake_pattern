@@ -1,32 +1,13 @@
 package models
 
 import org.joda.time.DateTime
-
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import helpers.EnumUtils
 
 object UserStatus extends Enumeration {
 	type UserStatus = Value
 	val Active, Deleted = Value
-}
-
-object EnumUtils {
-	def enumReads[E <: Enumeration](enum: E): Reads[E#Value] = new Reads[E#Value] {
-		def reads(json: JsValue): JsResult[E#Value] = json match {
-			case JsString(s) => {
-				try {
-					JsSuccess(enum.withName(s))
-				} catch {
-					case _: NoSuchElementException => JsError(s"Enumeration expected of type: '${enum.getClass}', but it does not appear to contain the value: '$s'")
-				}
-			}
-			case _ => JsError("String value expected")
-		}
-	}
-
-	implicit def enumWrites[E <: Enumeration]: Writes[E#Value] = new Writes[E#Value] {
-		def writes(v: E#Value): JsValue = JsString(v.toString)
-	}
 }
 
 case class User (

@@ -19,24 +19,12 @@ import models.BaseModel
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import org.joda.time.DateTime
+import models.TestModel
+import models.TestStatus
 
 class DBServiceUnitSpec extends Specification with Mockito {
 
-    case class TestModel(
-        _id: Option[BSONObjectID] = None,
-        title: String,
-        createdDate: DateTime = DateTime.now,
-        updatedDate: Option[DateTime] = None) extends BaseModel[TestModel] {
-
-        def withNewCreatedDate(newCreatedDate: DateTime): TestModel = this.copy(createdDate = newCreatedDate)
-        def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
-    }
-
-    object TestModel {
-        implicit val fmt = Json.format[TestModel]
-    }
-
-    class TestDBService extends DBServiceComponent[TestModel] with DBRepositoryComponent[TestModel] {
+    class TestDBService extends DBServiceComponent[TestModel, TestStatus.Value] with DBRepositoryComponent[TestModel, TestStatus.Value] {
         val dbService = new DBService
         val dbRepository = mock[DBRepository]
         def coll = mock[JSONCollection]
@@ -63,7 +51,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val testModelList = Seq(mock[TestModel], mock[TestModel])
 
             when(testDBService.dbRepository.find(query, 0, 0)).thenReturn(Future(testModelList))
-            testDBService.dbService.find(query, 0, 0) onComplete {
+            testDBService.dbService.all(0, 0) onComplete {
                 case Success(result) => result must equalTo(testModelList)
                 case Failure(t) =>
             }

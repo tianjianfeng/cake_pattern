@@ -19,25 +19,15 @@ import models.BaseModel
 import org.joda.time.DateTime
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-
+import play.api.libs.json.Reads
+import helpers.EnumUtils
+import play.api.libs.functional.syntax._
+import models.TestModel
+import models.TestStatus
 class DBRepositoryUnitSpec extends Specification with Mockito {
 
-    case class TestModel(
-        title: String,
-        _id: Option[BSONObjectID] = None,
-        createdDate: DateTime = DateTime.now,
-        updatedDate: Option[DateTime] = None) extends BaseModel[TestModel] {
 
-        def withNewCreatedDate(newCreatedDate: DateTime): TestModel = this.copy(createdDate = newCreatedDate)
-        def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
-
-    }
-
-    object TestModel {
-        implicit val fmt = Json.format[TestModel]
-    }
-
-    class TestDBRepository extends DBRepositoryComponent[TestModel] {
+    class TestDBRepository extends DBRepositoryComponent[TestModel, TestStatus.Value] {
         val dbRepository = new DBRepository
         def coll = mock[JSONCollection]
     }
