@@ -4,6 +4,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
+import org.mockito.Mockito.when
+import org.mockito.Mockito.doReturn
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import play.api.libs.functional.syntax.toInvariantFunctorOps
@@ -30,7 +32,7 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
         def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
 
     }
-        
+
     object TestModel {
         implicit val fmt = Json.format[TestModel]
     }
@@ -83,6 +85,5 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
             }
             1 must equalTo(1)
         }
-
     }
 }

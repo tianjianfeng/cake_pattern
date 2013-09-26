@@ -29,8 +29,8 @@ import org.joda.time.DateTimeUtils
 class UserControllerUnitSpec extends Specification with Mockito {
 
     class TestController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
-        val dbService = mock[UserService] 
-        val dbRepository = mock[UserRepository] 
+        val dbService = mock[UserService]
+        val dbRepository = mock[UserRepository]
     }
 
     "User Controller" should {
@@ -38,13 +38,20 @@ class UserControllerUnitSpec extends Specification with Mockito {
         "return CREATED when a user is created successfully" in {
             val controller = new TestController()
             val (firstname, lastname) = ("testfirstname", "testlastname")
-            val json = Json.obj(
-                "firstname" -> firstname,
-                "lastname" -> lastname)
 
+<<<<<<< HEAD
             val user = mock[User]
             
+=======
+            val user = User(firstname = firstname,lastname = lastname)
+
+>>>>>>> fc3381a99003b03562b209a45621edc1d1350aba
             when(controller.dbService.insert(user)).thenReturn(Future(Right(user)))
+            
+            val json = Json.obj(
+            		"firstname" -> firstname,
+            		"lastname" -> lastname)
+
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
 
@@ -73,7 +80,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = "abc", lastname = "edf")
 
-            when(controller.dbService.findOneById(id)).thenReturn(Future(Some(user)))
+            when(controller.dbService.findOneById(id)).thenReturn(Future(Right(Some(user))))
             val req = FakeRequest()
             val result = controller.findOneById(id)(req)
 
@@ -85,12 +92,11 @@ class UserControllerUnitSpec extends Specification with Mockito {
         "return OK with a list of users as json when finding users with skip and limit" in {
             val controller = new TestController()
 
-
             val selector = Json.obj()
             val (limit, skip) = (0, 0)
-            val users = Seq(User(firstname = "abc", lastname = "def"), User(firstname= "123", lastname="456"))
+            val users = Seq(User(firstname = "abc", lastname = "def"), User(firstname = "123", lastname = "456"))
             when(controller.dbService.find(selector, limit, skip)).thenReturn(Future(users))
-            
+
             val req = FakeRequest().withBody(selector)
             val result = controller.find(limit, skip)(req)
 
@@ -107,30 +113,30 @@ class UserControllerUnitSpec extends Specification with Mockito {
                 "firstname" -> firstname,
                 "lastname" -> lastname)
 
-            val user = User(firstname=firstname, lastname=lastname)
-            
-            when(controller.dbService.update(id, user)).thenReturn(Future(Right(user)))
+            val user = User(_id= Some(BSONObjectID("523adf223386b69b47c63431")), firstname = firstname, lastname = lastname)
+
+            when(controller.dbService.update(user)).thenReturn(Future(Right(user)))
             val req = FakeRequest().withBody(json)
             val result = controller.update(id)(req)
 
             status(result) mustEqual OK
         }
 
-//        "return OK with one user if the specificAction is successful" in {
-//            val controller = new TestController()
-//            val id = "523adf223386b69b47c63431"
-//
-//            val user = User(firstname = "abc", lastname = "edf")
-//
-//            val selector = Json.obj("_id" -> BSONObjectID(id))
-//            when(controller.dbService.specific(selector)).thenReturn(Future(Some(user)))
-//            val req = FakeRequest()
-//            val result = controller.specific(id)(req)
-//
-//            status(result) mustEqual OK
-//            contentType(result) must beSome("application/json")
-//            contentAsString(result) must contain("firstname")
-//            contentAsString(result) must contain("lastname")
-//        }
+        //        "return OK with one user if the specificAction is successful" in {
+        //            val controller = new TestController()
+        //            val id = "523adf223386b69b47c63431"
+        //
+        //            val user = User(firstname = "abc", lastname = "edf")
+        //
+        //            val selector = Json.obj("_id" -> BSONObjectID(id))
+        //            when(controller.dbService.specific(selector)).thenReturn(Future(Some(user)))
+        //            val req = FakeRequest()
+        //            val result = controller.specific(id)(req)
+        //
+        //            status(result) mustEqual OK
+        //            contentType(result) must beSome("application/json")
+        //            contentAsString(result) must contain("firstname")
+        //            contentAsString(result) must contain("lastname")
+        //        }
     }
 }
