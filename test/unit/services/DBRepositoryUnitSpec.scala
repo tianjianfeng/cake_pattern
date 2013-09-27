@@ -8,6 +8,10 @@ import org.mockito.Mockito.when
 import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.withSettings
 import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.spy
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import play.api.libs.functional.syntax.toInvariantFunctorOps
@@ -29,6 +33,7 @@ import models.TestStatus
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
+import services.DBServiceException
 
 class DBRepositoryUnitSpec extends Specification with Mockito {
 
@@ -58,16 +63,16 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
         }
 
         "return exception if the operation is failed" in {
-            val operation = Future(LastError(ok = false, err = Some("field"), code = Some(1), errMsg = Some("mymsg"), originalDocument = None, updated = 0, updatedExisting = false))
+            val lastError = LastError(ok = false, err = Some("field"), code = Some(1), errMsg = Some("mymsg"), originalDocument = None, updated = 0, updatedExisting = false)
+            val operation = Future(lastError)
             val testDBRepo = new TestDBRepository()
+            
             val fakeObject = TestModel(title = "abc")
 
             val result = testDBRepo.dbRepository.recover[TestModel](operation)(fakeObject)
             val futureResult = result map {
                 case Success(t) =>
-                case Failure(e) => {
-                    e.getMessage()
-                }
+                case Failure(e) => e.asInstanceOf[DBServiceException].message
             }
 
             futureResult onComplete {
@@ -76,6 +81,7 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
                     msg must equalTo("mymsg")
                 }
             }
+            
             1 must equalTo(1)
         }
     }
