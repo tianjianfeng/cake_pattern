@@ -4,7 +4,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import org.mockito.Mockito.when
 import org.mockito.Mockito.doReturn
+import org.mockito.Matchers._
 import org.specs2.mock.Mockito
+import org.mockito.Matchers.argThat
 import org.specs2.mutable.Specification
 import controllers.UserCtrl
 import models.User
@@ -25,6 +27,10 @@ import services.UserServiceComponent
 import play.api.test.Helpers.defaultAwaitTimeout
 import org.joda.time.DateTime
 import org.joda.time.DateTimeUtils
+import helpers.UserMatcher
+import org.hamcrest.Matcher
+import scala.util.Success
+import scala.util.Failure
 
 class UserControllerUnitSpec extends Specification with Mockito {
 
@@ -39,17 +45,17 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val controller = new TestController()
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
-            val user = User(firstname = firstname,lastname = lastname)
+            val user = User(firstname = firstname, lastname = lastname)
 
-            when(controller.dbService.insert(user)).thenReturn(Future(Right(user)))
-            
+            when(controller.dbService.insert(org.mockito.Matchers.any[User])).thenReturn(Future(Success(user)))
+//            when(controller.dbService.insert(org.mockito.Matchers.argThat(new UserMatcher()))).thenReturn(Future(Right(user)))
+
             val json = Json.obj(
-            		"firstname" -> firstname,
-            		"lastname" -> lastname)
+                "firstname" -> firstname,
+                "lastname" -> lastname)
 
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
-
             status(result) mustEqual CREATED
         }
 
@@ -62,7 +68,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = firstname, lastname = lastname)
 
-            when(controller.dbService.insert(user)).thenReturn(Future(Left(any[ServiceException])))
+            when(controller.dbService.insert(user)).thenReturn(Future(Failure(any[ServiceException])))
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
 
@@ -75,7 +81,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = "abc", lastname = "edf")
 
-            when(controller.dbService.findOneById(id)).thenReturn(Future(Right(Some(user))))
+            when(controller.dbService.findOneById(id)).thenReturn(Future(Success(Some(user))))
             val req = FakeRequest()
             val result = controller.findOneById(id)(req)
 
@@ -107,30 +113,13 @@ class UserControllerUnitSpec extends Specification with Mockito {
                 "firstname" -> firstname,
                 "lastname" -> lastname)
 
-            val user = User(id= Some(id), firstname = firstname, lastname = lastname)
+            val user = User(id = Some(id), firstname = firstname, lastname = lastname)
 
-            when(controller.dbService.update(user)).thenReturn(Future(Right(user)))
+            when(controller.dbService.update(user)).thenReturn(Future(Success(user)))
             val req = FakeRequest().withBody(json)
             val result = controller.update(id)(req)
 
             status(result) mustEqual OK
         }
-
-        //        "return OK with one user if the specificAction is successful" in {
-        //            val controller = new TestController()
-        //            val id = "523adf223386b69b47c63431"
-        //
-        //            val user = User(firstname = "abc", lastname = "edf")
-        //
-        //            val selector = Json.obj("_id" -> BSONObjectID(id))
-        //            when(controller.dbService.specific(selector)).thenReturn(Future(Some(user)))
-        //            val req = FakeRequest()
-        //            val result = controller.specific(id)(req)
-        //
-        //            status(result) mustEqual OK
-        //            contentType(result) must beSome("application/json")
-        //            contentAsString(result) must contain("firstname")
-        //            contentAsString(result) must contain("lastname")
-        //        }
     }
 }

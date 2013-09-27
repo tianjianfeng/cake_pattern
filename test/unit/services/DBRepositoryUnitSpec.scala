@@ -40,11 +40,9 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
             val fakeObject = TestModel(title = "abc")
 
             val result = testDBRepository.dbRepository.recover[TestModel](operation)(fakeObject)
-            val futureResult = result map { either =>
-                either match {
-                    case Right(result) => result
-                    case Left(_) =>
-                }
+            val futureResult = result map { 
+                    case Success(result) => result
+                    case Failure(_) =>
             }
 
             futureResult onComplete {
@@ -60,11 +58,11 @@ class DBRepositoryUnitSpec extends Specification with Mockito {
             val fakeObject = TestModel(title = "abc")
 
             val result = testDBRepository.dbRepository.recover[TestModel](operation)(fakeObject)
-            val futureResult = result map { either =>
-                either match {
-                    case Right(_) =>
-                    case Left(e) => e.message
-                }
+            val futureResult = result map { 
+                    case Success(t) => 
+                    case Failure(e) => {
+                    	e.getMessage()
+                    } 
             }
 
             futureResult onComplete {

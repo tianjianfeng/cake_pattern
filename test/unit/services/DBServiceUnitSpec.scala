@@ -37,9 +37,9 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val id = "id"
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.findOneById(id)).thenReturn(Future(Right(Some(testModel))))
+            when(testDBService.dbRepository.findOneById(id)).thenReturn(Future(Success(Some(testModel))))
             testDBService.dbService.findOneById(id) onComplete {
-                case Success(either) => either.right.get must equalTo(testModel)
+                case Success(optUser) => optUser.get.get must equalTo(testModel)
                 case Failure(t) =>
             }
             1 must equalTo(1)
@@ -47,10 +47,11 @@ class DBServiceUnitSpec extends Specification with Mockito {
 
         "return a list of objects when calling find" in {
             val testDBService = new TestDBService()
-            val query = mock[JsObject]
+            val query = Json.obj()
             val testModelList = Seq(mock[TestModel], mock[TestModel])
 
             when(testDBService.dbRepository.find(query, 0, 0)).thenReturn(Future(testModelList))
+            println (testDBService.dbService.all(0, 0))
             testDBService.dbService.all(0, 0) onComplete {
                 case Success(result) => result must equalTo(testModelList)
                 case Failure(t) =>
@@ -62,13 +63,11 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val testDBService = new TestDBService()
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.insert(testModel.withNewCreatedDate(any[DateTime]))).thenReturn(Future(Right(testModel)))
+            when(testDBService.dbRepository.insert(testModel)).thenReturn(Future(Success(testModel)))
 
-            val futureResult = testDBService.dbService.insert(testModel) map { either =>
-                either match {
-                    case Right(result) => result
-                    case Left(_) =>
-                }
+            val futureResult = testDBService.dbService.insert(testModel) map { 
+                    case Success(result) => result
+                    case Failure(_) =>
             }
             futureResult onComplete {
                 case Success(result) => result must equalTo(testModel)
@@ -82,13 +81,11 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val id = "id"
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.update(testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Right(testModel)))
+            when(testDBService.dbRepository.update(testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Success(testModel)))
 
-            val futureResult = testDBService.dbService.update(testModel) map { either =>
-                either match {
-                    case Right(result) => result
-                    case Left(_) =>
-                }
+            val futureResult = testDBService.dbService.update(testModel) map { 
+                    case Success(result) => result
+                    case Failure(_) =>
             }
             futureResult onComplete {
                 case Success(result) => result must equalTo(testModel)
@@ -101,13 +98,11 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val testDBService = new TestDBService()
             val id = "id"
 
-            when(testDBService.dbRepository.remove(id)).thenReturn(Future(Right(true)))
+            when(testDBService.dbRepository.remove(id)).thenReturn(Future(Success(true)))
 
-            val futureResult = testDBService.dbService.remove(id) map { either =>
-                either match {
-                    case Right(result) => result
-                    case Left(_) =>
-                }
+            val futureResult = testDBService.dbService.remove(id) map { 
+                    case Success(result) => result
+                    case Failure(_) =>
             }
             futureResult onComplete {
                 case Success(result) => result must equalTo(true)

@@ -2,50 +2,46 @@ package services
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
 import play.api.Play.current
 import play.api.Logger
 import play.api.libs.json._
-
 import org.joda.time.DateTime
-
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.modules.reactivemongo.json.collection.JSONCollection
 import play.modules.reactivemongo.json.BSONFormats._
-
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
-
 import reactivemongo.bson.BSONObjectID
 import scala.util.Success
 import scala.util.Failure
 import scala.concurrent.{ future, promise }
-
 import models.BaseModel
+import scala.util.Try
+import reactivemongo.bson.BSONDocument
 
 trait DBServiceComponent[T <: BaseModel[T, U], U] {
-	this: DBRepositoryComponent[T, U] =>
-	val dbService: DBService
+    this: DBRepositoryComponent[T, U] =>
+    val dbService: DBService
 
-	class DBService {
+    class DBService {
 
-        def findOneById(id: String)(implicit reader: Reads[T]): Future[Either[ServiceException, Option[T]]] = {
+        def findOneById(id: String)(implicit reader: Reads[T]): Future[Try[Option[T]]] = {
             dbRepository.findOneById(id)
         }
 
         def all(limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
-            dbRepository.find( Json.obj(), limit, skip)
+            dbRepository.find(Json.obj(), limit, skip)
         }
 
-        def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+        def insert(s: T)(implicit writer: Writes[T]): Future[Try[T]] = {
             dbRepository.insert(s)
         }
 
-        def update(u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+        def update(u: T)(implicit writer: Writes[T]): Future[Try[T]] = {
             dbRepository.update(u.withNewUpdatedDate(Some(DateTime.now)))
         }
 
-        def remove(id: String): Future[Either[ServiceException, Boolean]] = {
+        def remove(id: String): Future[Try[Boolean]] = {
             dbRepository.remove(id)
         }
     }
@@ -61,39 +57,45 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
     class DBRepository {
         implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-        def findOneById(id: String)(implicit reader: Reads[T]): Future[Either[ServiceException, Option[T]]] = {
-            constructBsonId(id) match {
-                case Right(bsonObjectId) => {
-                    val query = Json.obj("_id" -> bsonObjectId)
-
+        def findOneById(id: String)(implicit reader: Reads[T]): Future[Try[Option[T]]] = {
+            BSONObjectID.parse(id) match {
+                case Success(bsonId) => {
+                    val query = Json.obj("_id" -> bsonId)
                     val jsvalue = coll.find(query).one[JsValue]
-                    val optUser = for (js <- jsvalue) yield js.get.asOpt[T]
-
-                    val p = promise[Either[ServiceException, Option[T]]]
-                    optUser onComplete {
-                        case Success(result) =>
-                            p success Right(result)
-                        case Failure(t) =>
-                            p success Left(BSONObjectIDException(t.getMessage(), t))
-                    }
-                    p.future
+                    for (js <- jsvalue) yield Success(js.get.asOpt[T])
                 }
-                case Left(e) => Future(Left(e))
+                case Failure(e) => Future(Failure(e))
             }
         }
 
         def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
-            val cursor = coll.find(sel).options(QueryOpts().skip(skip)).cursor[T]
-            if (limit != 0) cursor.toList(limit) else cursor.toList
+//                        val cursor = coll.find(sel).options(QueryOpts().skip(skip)).cursor[T]
+            val cursor = coll.find(sel).options(QueryOpts().skip(skip).batchSize(limit)).cursor[JsValue].toList
+            val filtered = cursor map { list =>
+                for (jsValue <- list if (jsValue.asOpt[T] != None)) yield jsValue.as[T]
+            }
+            filtered
+//                filter { jsValue =>
+//                    val optT = jsValue.asOpt[T]
+//                    optT != None
+//                } 
+//            }
+//            cursor onSuccess
+//            for (c <- cursor)
+//            val filtered = cursor.filter { jsValue =>
+//                    val optT = for (js <- jsValue) yield Success(js.asOpt[T])
+//                    optT != None
+//            } 
+//            if (limit != 0) cursor.toList(limit) else cursor.toList
         }
 
-        def insert(s: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+        def insert(s: T)(implicit writer: Writes[T]): Future[Try[T]] = {
             recover(coll.insert(s)) {
                 s
             }
         }
 
-        def update(u: T)(implicit writer: Writes[T]): Future[Either[ServiceException, T]] = {
+        def update(u: T)(implicit writer: Writes[T]): Future[Try[T]] = {
             val jsObject = Json.toJson(u).as[JsObject] - ("id")
             val updated = Json.obj("$set" -> jsObject)
 
@@ -103,39 +105,30 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
             }
         }
 
-        def remove(id: String): Future[Either[ServiceException, Boolean]] = {
-            constructBsonId(id) match {
-                case Right(bsonObjectId) => {
-                    val query = Json.obj("id" -> bsonObjectId)
+        def remove(id: String): Future[Try[Boolean]] = {
+            BSONObjectID.parse(id) match {
+                case Success(bsonId) => {
+                    val query = Json.obj("id" -> bsonId)
                     recover(coll.remove(query)) {
                         true
                     }
                 }
-                case Left(e) => Future(Left(e))
+                case Failure(e) => Future(Failure(e))
             }
         }
 
-        def recover[S](operation: Future[LastError])(success: => S): Future[Either[ServiceException, S]] = {
+        def recover[S](operation: Future[LastError])(success: => S): Future[Try[S]] = {
             operation.map {
                 lastError =>
                     lastError.inError match {
                         case true => {
                             Logger.error(s"DB operation did not perform successfully: [lastError=$lastError]")
-                            Left(DBServiceException(lastError))
+                            Failure(DBServiceException(lastError))
                         }
                         case false => {
-                            Right(success)
+                            Success(success)
                         }
                     }
-            }
-        }
-        def constructBsonId(id: String): Either[BSONObjectIDException, BSONObjectID] = {
-            try {
-                Right(BSONObjectID(id))
-            } catch {
-                case (e: NumberFormatException) => Left(BSONObjectIDException(e.getMessage(), e))
-                case (e: IllegalArgumentException) => Left(BSONObjectIDException(e.getMessage(), e))
-                case (e: Exception) => Left(BSONObjectIDException(e.getMessage(), e))
             }
         }
     }
