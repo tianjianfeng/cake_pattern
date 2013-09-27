@@ -32,7 +32,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
 
     "DBService" should {
 
-        "return one object when send the query to the repository" in {
+        "return one object when retrieve by id successfully" in {
             val testDBService = new TestDBService()
             val id = "id"
             val testModel = mock[TestModel]
@@ -48,7 +48,7 @@ class DBServiceUnitSpec extends Specification with Mockito {
         "return a list of objects when calling find" in {
             val testDBService = new TestDBService()
             val query = Json.obj()
-            val testModelList = Seq(mock[TestModel], mock[TestModel])
+            val testModelList = List(mock[TestModel], mock[TestModel])
 
             when(testDBService.dbRepository.find(query, 0, 0)).thenReturn(Future(testModelList))
             println (testDBService.dbService.all(0, 0))
@@ -63,14 +63,16 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val testDBService = new TestDBService()
             val testModel = mock[TestModel]
 
-            when(testDBService.dbRepository.insert(testModel)).thenReturn(Future(Success(testModel)))
+            val testModelWithDate = testModel.withNewCreatedDate(Some(any[DateTime]))
+            
+            when(testDBService.dbRepository.insert(testModelWithDate )).thenReturn(Future(Success(testModelWithDate )))
 
-            val futureResult = testDBService.dbService.insert(testModel) map { 
+            val futureResult = testDBService.dbService.insert(testModel ) map { 
                     case Success(result) => result
                     case Failure(_) =>
             }
             futureResult onComplete {
-                case Success(result) => result must equalTo(testModel)
+                case Success(result) => result must equalTo(testModelWithDate )
                 case Failure(t) =>
             }
             1 must equalTo(1)
@@ -80,15 +82,16 @@ class DBServiceUnitSpec extends Specification with Mockito {
             val testDBService = new TestDBService()
             val id = "id"
             val testModel = mock[TestModel]
+            val testModelWithDate = testModel.withNewUpdatedDate(Some(any[DateTime]))
 
-            when(testDBService.dbRepository.update(testModel.withNewUpdatedDate(Some(any[DateTime])))).thenReturn(Future(Success(testModel)))
+            when(testDBService.dbRepository.update(testModelWithDate)).thenReturn(Future(Success(testModelWithDate)))
 
             val futureResult = testDBService.dbService.update(testModel) map { 
                     case Success(result) => result
                     case Failure(_) =>
             }
             futureResult onComplete {
-                case Success(result) => result must equalTo(testModel)
+                case Success(result) => result must equalTo(testModelWithDate)
                 case Failure(t) =>
             }
             1 must equalTo(1)

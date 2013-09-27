@@ -11,16 +11,15 @@ object UserStatus extends Enumeration {
     val Active, Deleted = Value
 }
 
-
 case class User(
+    id: Option[String] = None,
     firstname: String,
     lastname: String,
-    id: Option[String] = None,
-    createdDate: DateTime = (new MyDate).now, //DateTime.now,
+    createdDate: Option[DateTime] = None,
     updatedDate: Option[DateTime] = None,
     status: UserStatus.Value = UserStatus.Active) extends BaseModel[User, UserStatus.Value] {
 
-    def withNewCreatedDate(newCreatedDate: DateTime): User = this.copy(createdDate = newCreatedDate)
+    def withNewCreatedDate(newCreatedDate: Option[DateTime]): User = this.copy(createdDate = newCreatedDate)
     def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): User = this.copy(updatedDate = newUpdatedDate)
 
     //implicit val writer = User.UserBSONWriter
@@ -33,18 +32,18 @@ object User {
     import EnumUtils.enumWrites
 
     implicit val UserReads: Reads[User] = (
+        (__ \ "id").readNullable[String] and
         (__ \ "firstname").read[String] and
         (__ \ "lastname").read[String] and
-        (__ \ "id").readNullable[String] and
-        (__ \ "createdDate").read[DateTime] and
+        (__ \ "createdDate").readNullable[DateTime] and
         (__ \ "updatedDate").readNullable[DateTime] and
         (__ \ "status").read[UserStatus.Value])(User.apply _)
 
     implicit val UserWrites: Writes[User] = (
+        (__ \ "id").writeNullable[String] and
         (__ \ "firstname").write[String] and
         (__ \ "lastname").write[String] and
-        (__ \ "id").writeNullable[String] and
-        (__ \ "createdDate").write[DateTime] and
+        (__ \ "createdDate").writeNullable[DateTime] and
         (__ \ "updatedDate").writeNullable[DateTime] and
         (__ \ "status").write[UserStatus.Value])(unlift(User.unapply))
 

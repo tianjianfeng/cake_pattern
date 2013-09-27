@@ -37,9 +37,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest
 import org.junit.runner.RunWith
 import helpers.MyDate
 
-@RunWith(classOf[PowerMockRunner])
-@PrepareForTest(Array(classOf[MyDate]))
-//@PrepareForTest(fullyQualifiedNames = Array("org.joda.time.DateTime$"))
 class UserControllerUnitSpec extends Specification with Mockito {
 
     class TestController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
@@ -54,15 +51,8 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
             val user = User(firstname = firstname, lastname = lastname)
-            
-            
-            val myDate = PowerMockito.mock(classOf[MyDate])
-            when(myDate.now).thenReturn(DateTime.now)
-            
-when(controller.dbService.insert(any[User])).thenReturn(Future(Success(user)))
-//            when(controller.dbService.insert(org.mockito.Matchers.any[User])).thenReturn(Future(Success(user)))
-//            when(controller.dbService.insert(org.mockito.Matchers.argThat(new UserMatcher()))).thenReturn(Future(Right(user)))
-//            doReturn(Future(Success(user))).when(controller.dbService).insert(org.mockito.Matchers.argThat(new UserMatcher()))
+
+            when(controller.dbService.insert(user)).thenReturn(Future(Success(user)))
 
             val json = Json.obj(
                 "firstname" -> firstname,
@@ -71,6 +61,9 @@ when(controller.dbService.insert(any[User])).thenReturn(Future(Success(user)))
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
             status(result) mustEqual CREATED
+            contentType(result) must beSome("application/json")
+            contentAsString(result) must contain("firstname")
+            contentAsString(result) must contain("lastname")
         }
 
         "return Internal Server Error when a user is NOT created successfully" in {
@@ -108,7 +101,7 @@ when(controller.dbService.insert(any[User])).thenReturn(Future(Success(user)))
             val controller = new TestController()
 
             val (limit, skip) = (0, 0)
-            val users = Seq(User(firstname = "abc", lastname = "def"), User(firstname = "123", lastname = "456"))
+            val users = List(User(firstname = "abc", lastname = "def"), User(firstname = "123", lastname = "456"))
             when(controller.dbService.all(limit, skip)).thenReturn(Future(users))
 
             val req = FakeRequest()
@@ -129,6 +122,7 @@ when(controller.dbService.insert(any[User])).thenReturn(Future(Success(user)))
 
             val user = User(id = Some(id), firstname = firstname, lastname = lastname)
 
+            when(controller.dbService.findOneById(id)).thenReturn(Future(Success(Some(user))))
             when(controller.dbService.update(user)).thenReturn(Future(Success(user)))
             val req = FakeRequest().withBody(json)
             val result = controller.update(id)(req)

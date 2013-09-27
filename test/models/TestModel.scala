@@ -16,10 +16,10 @@ case class TestModel(
     id: Option[String] = None,
     title: String,
     status: TestStatus.Value = TestStatus.Active,
-    createdDate: DateTime = DateTime.now,
+    createdDate: Option[DateTime] = None,
     updatedDate: Option[DateTime] = None) extends BaseModel[TestModel, TestStatus.Value] {
 
-    def withNewCreatedDate(newCreatedDate: DateTime): TestModel = this.copy(createdDate = newCreatedDate)
+    def withNewCreatedDate(newCreatedDate: Option[DateTime]): TestModel = this.copy(createdDate = newCreatedDate)
     def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
 
 }
@@ -32,13 +32,13 @@ object TestModel {
         (__ \ "id").readNullable[String] and
         (__ \ "title").read[String] and
         (__ \ "status").read[TestStatus.Value] and
-        (__ \ "createdDate").read[DateTime] and
+        (__ \ "createdDate").readNullable[DateTime] and
         (__ \ "updatedDate").readNullable[DateTime])(TestModel.apply _)
 
     implicit val TestWrites: Writes[TestModel] = (
         (__ \ "id").writeNullable[String] and
         (__ \ "title").write[String] and
         (__ \ "status").write[TestStatus.Value] and
-        (__ \ "createdDate").write[DateTime] and
+        (__ \ "createdDate").writeNullable[DateTime] and
         (__ \ "updatedDate").writeNullable[DateTime])(unlift(TestModel.unapply))
 }

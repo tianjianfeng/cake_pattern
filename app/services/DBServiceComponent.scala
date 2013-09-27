@@ -29,12 +29,12 @@ trait DBServiceComponent[T <: BaseModel[T, U], U] {
             dbRepository.findOneById(id)
         }
 
-        def all(limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
+        def all(limit: Int, skip: Int)(implicit reader: Reads[T]): Future[List[T]] = {
             dbRepository.find(Json.obj(), limit, skip)
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Try[T]] = {
-            dbRepository.insert(s)
+            dbRepository.insert(s.withNewCreatedDate(Some(DateTime.now)))
         }
 
         def update(u: T)(implicit writer: Writes[T]): Future[Try[T]] = {
@@ -68,7 +68,7 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
             }
         }
 
-        def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
+        def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[List[T]] = {
             val cursor = coll.find(sel).options(QueryOpts().skip(skip).batchSize(limit)).cursor[JsValue].toList
             val filtered = cursor map { list =>
                 for (jsValue <- list if (jsValue.asOpt[T] != None)) yield jsValue.as[T]
