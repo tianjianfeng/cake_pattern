@@ -24,7 +24,7 @@ trait UserCtrl extends Controller {
         val json = request.body
         val user = User(firstname = (json \ "firstname").as[String],
             lastname = (json \ "lastname").as[String])
-
+println (user)
         dbService.insert(user) map {
             case Failure(_) => {
                 InternalServerError

@@ -14,6 +14,8 @@ object ApplicationBuild extends Build {
         "org.mockito" % "mockito-all" % "1.9.5",
         "org.jacoco" % "org.jacoco.core" % "0.6.3.201306030806",
         "org.jacoco" % "org.jacoco.report" % "0.6.3.201306030806",
+        "org.powermock" % "powermock-api-mockito" % "1.5.1",
+        "org.powermock" % "powermock-module-junit4" % "1.5.1",
         "org.reactivemongo" %% "play2-reactivemongo" % "0.10.0-SNAPSHOT"
     )
      

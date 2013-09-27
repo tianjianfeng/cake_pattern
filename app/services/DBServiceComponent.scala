@@ -69,24 +69,11 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
         }
 
         def find(sel: JsObject, limit: Int, skip: Int)(implicit reader: Reads[T]): Future[Seq[T]] = {
-//                        val cursor = coll.find(sel).options(QueryOpts().skip(skip)).cursor[T]
             val cursor = coll.find(sel).options(QueryOpts().skip(skip).batchSize(limit)).cursor[JsValue].toList
             val filtered = cursor map { list =>
                 for (jsValue <- list if (jsValue.asOpt[T] != None)) yield jsValue.as[T]
             }
             filtered
-//                filter { jsValue =>
-//                    val optT = jsValue.asOpt[T]
-//                    optT != None
-//                } 
-//            }
-//            cursor onSuccess
-//            for (c <- cursor)
-//            val filtered = cursor.filter { jsValue =>
-//                    val optT = for (js <- jsValue) yield Success(js.asOpt[T])
-//                    optT != None
-//            } 
-//            if (limit != 0) cursor.toList(limit) else cursor.toList
         }
 
         def insert(s: T)(implicit writer: Writes[T]): Future[Try[T]] = {

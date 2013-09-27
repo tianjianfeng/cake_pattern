@@ -4,6 +4,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import helpers.EnumUtils
+import helpers.MyDate
 
 object UserStatus extends Enumeration {
     type UserStatus = Value
@@ -15,7 +16,7 @@ case class User(
     firstname: String,
     lastname: String,
     id: Option[String] = None,
-    createdDate: DateTime = DateTime.now,
+    createdDate: DateTime = (new MyDate).now, //DateTime.now,
     updatedDate: Option[DateTime] = None,
     status: UserStatus.Value = UserStatus.Active) extends BaseModel[User, UserStatus.Value] {
 

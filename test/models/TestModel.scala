@@ -6,6 +6,7 @@ import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import helpers.EnumUtils.enumWrites
 
 object TestStatus extends Enumeration {
     type TestStatus = Value

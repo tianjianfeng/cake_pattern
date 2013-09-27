@@ -31,7 +31,15 @@ import helpers.UserMatcher
 import org.hamcrest.Matcher
 import scala.util.Success
 import scala.util.Failure
+import org.powermock.api.mockito.PowerMockito
+import org.powermock.modules.junit4.PowerMockRunner
+import org.powermock.core.classloader.annotations.PrepareForTest
+import org.junit.runner.RunWith
+import helpers.MyDate
 
+@RunWith(classOf[PowerMockRunner])
+@PrepareForTest(Array(classOf[MyDate]))
+//@PrepareForTest(fullyQualifiedNames = Array("org.joda.time.DateTime$"))
 class UserControllerUnitSpec extends Specification with Mockito {
 
     class TestController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
@@ -46,9 +54,15 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
             val user = User(firstname = firstname, lastname = lastname)
-
-            when(controller.dbService.insert(org.mockito.Matchers.any[User])).thenReturn(Future(Success(user)))
+            
+            
+            val myDate = PowerMockito.mock(classOf[MyDate])
+            when(myDate.now).thenReturn(DateTime.now)
+            
+when(controller.dbService.insert(any[User])).thenReturn(Future(Success(user)))
+//            when(controller.dbService.insert(org.mockito.Matchers.any[User])).thenReturn(Future(Success(user)))
 //            when(controller.dbService.insert(org.mockito.Matchers.argThat(new UserMatcher()))).thenReturn(Future(Right(user)))
+//            doReturn(Future(Success(user))).when(controller.dbService).insert(org.mockito.Matchers.argThat(new UserMatcher()))
 
             val json = Json.obj(
                 "firstname" -> firstname,
