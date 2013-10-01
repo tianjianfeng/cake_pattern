@@ -1,40 +1,48 @@
 package services
 
+import org.joda.time.DateTime
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.{ future, promise }
+
 import play.api.Play.current
 import play.api.Logger
-import org.joda.time.DateTime
+
 import play.modules.reactivemongo.ReactiveMongoPlugin
+
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
-import scala.util.Success
-import scala.util.Failure
-import scala.concurrent.{ future, promise }
-import models.BaseModel
-import scala.util.Try
 import reactivemongo.api.collections.default.BSONCollection
-import models.User
 import reactivemongo.bson._
-import play.api.libs.json.Json
+
+import scala.util.{Try,Success,Failure}
+
+import models.BaseModel
 
 trait DBServiceComponent[T <: BaseModel[T, U], U] {
-    this: DBRepositoryComponent[T, U] =>
+    this: DBRepositoryComponent =>
     val dbService: DBService
 
     class DBService {
 
         def findOneById[T](id: String)(implicit reader: BSONReader[BSONDocument, T], ec: ExecutionContext): Future[Option[T]] = {
             val p = promise[Option[T]]
-            dbRepository.findOneById(id) onComplete {
-                case Success(optBson) => {
-                    optBson match {
-                        case Some(bsonObj) => p success Some(BSON.readDocument[T](bsonObj))
-                        case None => p success None
-                    }
-                }
-                case Failure(e) => p failure e
-            }
+
+	        BSONObjectID.parse(id)  match {
+		        case Success(bsonId) =>
+			        dbRepository.findOneById(bsonId) onComplete {
+				        case Success(optBson) => {
+					        optBson match {
+						        case Some(bsonObj) => p success Some(BSON.readDocument[T](bsonObj))
+						        case None => p success None
+					        }
+				        }
+				        case Failure(e) => p failure e
+			        }
+		        case Failure(e) => p failure BSONObjectIDException(e.getMessage(), e)
+	        }
+
             p.future
         }
 
@@ -80,7 +88,7 @@ trait DBServiceComponent[T <: BaseModel[T, U], U] {
     }
 }
 
-trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
+trait DBRepositoryComponent {
 
     def db = ReactiveMongoPlugin.db
     def coll: BSONCollection
@@ -90,18 +98,8 @@ trait DBRepositoryComponent[T <: BaseModel[T, U], U] {
     class DBRepository {
         implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-        def findOneById(id: String): Future[Option[BSONDocument]] = {
-            val p = promise[Option[BSONDocument]]
-
-            BSONObjectID.parse(id) match {
-                case Success(bsonId) => {
-                    val query = BSONDocument("_id" -> bsonId)
-                    val bsonDocument = coll.find(query).one[BSONDocument]
-                    for (bson <- bsonDocument) yield p success bson
-                }
-                case Failure(e) => p failure BSONObjectIDException(e.getMessage(), e)
-            }
-            p.future
+        def findOneById(id: BSONObjectID): Future[Option[BSONDocument]] = {
+            coll.find(BSONDocument("_id" -> id)).one[BSONDocument]
         }
 
         def find(sel: BSONDocument, limit: Int, skip: Int): Future[List[BSONDocument]] = {
