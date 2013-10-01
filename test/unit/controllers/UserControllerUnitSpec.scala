@@ -102,6 +102,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
             contentAsString(result) must contain("firstname")
             contentAsString(result) must contain("lastname")
         }
+
         "return OK with a list of users as json when finding users with skip and limit" in {
             val controller = new TestController()
 
@@ -117,6 +118,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
             contentType(result) must beSome("application/json")
             Json.parse(contentAsString(result)).as[Seq[User]].size must equalTo(2)
         }
+
         "return OK when a user is updated successfully by its id" in {
             val controller = new TestController()
             val id = "523adf223386b69b47c63431"
