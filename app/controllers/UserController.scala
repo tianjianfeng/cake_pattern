@@ -17,9 +17,6 @@ import scala.concurrent.Future
 import models.UserStatus
 import scala.util.Failure
 import scala.util.Success
-import scala.concurrent.duration._
-import akka.util.Timeout
-import play.api.libs.json.Writes
 import services.BSONObjectIDException
 
 trait UserCtrl extends Controller {
@@ -32,16 +29,28 @@ trait UserCtrl extends Controller {
 
         dbService.insert(user) map {
             case Failure(_) => InternalServerError
-            case Success(user) => Created
+            case Success(user) => Created(Json.toJson(user))
         }
     }
 
     def findOneById(id: String) = Action.async {
+        println ("dbservice: ==> " + dbService)
+        println ("id: " + id)
+        println ("another ==> " + dbService.findOneById(id) )
         dbService.findOneById(id) map {
-            case Some(user) => Ok(Json.toJson(user))
-            case None => NotFound
+            case Some(user) => {
+                println ("user: " + user)
+                Ok(Json.toJson(user))
+            }
+            case None => {
+                println ("not found")
+                NotFound
+            }
         } recover {
-            case e: BSONObjectIDException => BadRequest
+            case e: BSONObjectIDException => {
+                println ("bson exception")
+                BadRequest
+            }
         }
     }
 

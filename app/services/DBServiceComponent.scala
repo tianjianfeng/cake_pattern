@@ -1,24 +1,20 @@
 package services
 
 import org.joda.time.DateTime
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.{ future, promise }
-
 import play.api.Play.current
 import play.api.Logger
-
 import play.modules.reactivemongo.ReactiveMongoPlugin
-
 import reactivemongo.api.QueryOpts
 import reactivemongo.core.commands.LastError
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
-
-import scala.util.{Try,Success,Failure}
-
+import scala.util.{ Try, Success, Failure }
 import models.BaseModel
+import models.User
+import models.UserStatus
 
 trait DBServiceComponent[T <: BaseModel[T, U], U] {
     this: DBRepositoryComponent =>
@@ -26,33 +22,51 @@ trait DBServiceComponent[T <: BaseModel[T, U], U] {
 
     class DBService {
 
-        def findOneById[T](id: String)(implicit reader: BSONReader[BSONDocument, T], ec: ExecutionContext): Future[Option[T]] = {
+        def findOneById[T](id: String)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[Option[T]] = {
+            
             val p = promise[Option[T]]
 
-	        BSONObjectID.parse(id)  match {
-		        case Success(bsonId) =>
-			        dbRepository.findOneById(bsonId) onComplete {
-				        case Success(optBson) => {
-					        optBson match {
-						        case Some(bsonObj) => p success Some(BSON.readDocument[T](bsonObj))
-						        case None => p success None
-					        }
-				        }
-				        case Failure(e) => p failure e
-			        }
-		        case Failure(e) => p failure BSONObjectIDException(e.getMessage(), e)
-	        }
+            BSONObjectID.parse(id) match {
+                case Success(bsonId) =>
+                    dbRepository.findOneById(bsonId) onComplete {
+                        case Success(optBson) => {
+                            optBson match {
+                                case Some(bsonObj) => p success Some(BSON.readDocument[T](bsonObj))
+                                case None => p success None
+                            }
+                        }
+                        case Failure(e) => p failure e
+                    }
+                case Failure(e) => p failure BSONObjectIDException(e.getMessage(), e)
+            }
 
             p.future
         }
 
-        def all(limit: Int, skip: Int)(implicit reader: BSONReader[BSONDocument, T], ec: ExecutionContext): Future[List[T]] = {
+        def all(limit: Int, skip: Int)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[List[T]] = {
             dbRepository.find(BSONDocument(), limit, skip) map { listBson =>
                 for (obj <- listBson) yield BSON.readDocument[T](obj)
             }
         }
 
-        def recover[T](operation: Future[LastError])(success: => T)(implicit reader: BSONReader[BSONDocument, T], ec: ExecutionContext): Future[Try[T]] = {
+        def insert(s: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONDocumentReader[T]): Future[Try[T]] = {
+            val t = s.withNewCreatedDate(Some(DateTime.now))
+            println(t)
+            recover(coll.insert(s.withNewCreatedDate(Some(DateTime.now)))) {
+                s
+            }
+        }
+
+        def update(id: String, u: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONDocumentReader[T]): Future[Try[T]] = {
+            val selector = BSONDocument("_id" -> BSONObjectID(id))
+
+            val updated = BSONDocument("$set" -> u.withNewUpdatedDate(Some(DateTime.now)))
+            println("user ==> " + BSONDocument.pretty(updated))
+            recover(coll.update(selector, updated)) {
+                u
+            }
+        }
+        def recover[T](operation: Future[LastError])(success: => T)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[Try[T]] = {
             operation.map {
                 lastError =>
                     lastError.inError match {
@@ -64,25 +78,6 @@ trait DBServiceComponent[T <: BaseModel[T, U], U] {
                             Success(success)
                         }
                     }
-            }
-        }
-
-        def insert(s: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONReader[BSONDocument, T]): Future[Try[T]] = {
-            //            val bsonDoc = writer.writeTry(s)
-            val t = s.withNewCreatedDate(Some(DateTime.now))
-            println (t)
-            recover(coll.insert(s.withNewCreatedDate(Some(DateTime.now)))) {
-                s
-            }
-        }
-
-        def update(id: String, u: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONReader[BSONDocument, T]): Future[Try[T]] = {
-            val selector = BSONDocument("_id" -> BSONObjectID(id))
-            
-            val updated = BSONDocument("$set" -> u.withNewUpdatedDate(Some(DateTime.now)))
-            println ("user ==> " + BSONDocument.pretty(updated))
-            recover(coll.update(selector, updated)) {
-                u
             }
         }
     }

@@ -12,7 +12,7 @@ object UserComponentRegistry extends UserServiceComponent with UserRepositoryCom
 
 trait UserServiceComponent extends DBServiceComponent[User, UserStatus.Value] { this: UserRepositoryComponent =>
 
-    val dbService: UserService
+    override val dbService: UserService
 
     class UserService extends DBService
 }
