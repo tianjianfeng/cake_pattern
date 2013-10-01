@@ -1,14 +1,15 @@
 package services
 
 import scala.concurrent.Future
-
 import models.User
 import models.UserStatus
-import play.modules.reactivemongo.json.collection.JSONCollection
+import reactivemongo.api.collections.default.BSONCollection
+import scala.concurrent.ExecutionContext
 
 object UserComponentRegistry extends UserServiceComponent with UserRepositoryComponent {
     val dbRepository = new UserRepository
     val dbService = new UserService
+    
 }
 
 trait UserServiceComponent extends DBServiceComponent[User, UserStatus.Value] { this: UserRepositoryComponent =>
@@ -22,7 +23,10 @@ trait UserRepositoryComponent extends DBRepositoryComponent[User, UserStatus.Val
 
     val dbRepository: UserRepository
     
-    def coll: JSONCollection = db[JSONCollection]("users")
+//    implicit val ec: ExecutionContext
+    
+//    def coll: JSONCollection = db[JSONCollection]("users")
+    def coll: BSONCollection = db[BSONCollection]("users")
 
     class UserRepository extends DBRepository
 }

@@ -4,9 +4,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import org.mockito.Mockito.when
 import org.mockito.Mockito.doReturn
-import org.mockito.Matchers._
 import org.specs2.mock.Mockito
-import org.mockito.Matchers.argThat
 import org.specs2.mutable.Specification
 import controllers.UserCtrl
 import models.User
@@ -18,24 +16,19 @@ import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.OK
 import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.contentType
+import play.api.test.Helpers.running
 import play.api.test.Helpers.status
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
 import services.ServiceException
 import services.UserRepositoryComponent
 import services.UserServiceComponent
-import play.api.test.Helpers.defaultAwaitTimeout
-import org.joda.time.DateTime
-import org.joda.time.DateTimeUtils
-import helpers.UserMatcher
-import org.hamcrest.Matcher
 import scala.util.Success
 import scala.util.Failure
-import org.powermock.api.mockito.PowerMockito
-import org.powermock.modules.junit4.PowerMockRunner
-import org.powermock.core.classloader.annotations.PrepareForTest
-import org.junit.runner.RunWith
-import helpers.MyDate
+import play.api.libs.concurrent.Promise
+import scala.concurrent.duration._
+import akka.util.Timeout
+import play.api.test.FakeApplication
 
 class UserControllerUnitSpec extends Specification with Mockito {
 
@@ -47,11 +40,17 @@ class UserControllerUnitSpec extends Specification with Mockito {
     "User Controller" should {
 
         "return CREATED when a user is created successfully" in {
+            running(FakeApplication()) {
             val controller = new TestController()
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
             val user = User(firstname = firstname, lastname = lastname)
 
+            
+            implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+//            val spied = spy(Promise)
+//            when (spied.timeout("timeout", timeout.duration)).thenReturn(Future("timeout"))
+            
             when(controller.dbService.insert(user)).thenReturn(Future(Success(user)))
 
             val json = Json.obj(
@@ -64,6 +63,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
             contentType(result) must beSome("application/json")
             contentAsString(result) must contain("firstname")
             contentAsString(result) must contain("lastname")
+            }
         }
 
         "return Internal Server Error when a user is NOT created successfully" in {
@@ -75,6 +75,10 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = firstname, lastname = lastname)
 
+            implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+//            val spied = spy(Promise)
+//            when (spied.timeout("timeout", timeout.duration)).thenReturn(Future("timeout"))
+            
             when(controller.dbService.insert(user)).thenReturn(Future(Failure(any[ServiceException])))
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
@@ -88,10 +92,11 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = "abc", lastname = "edf")
 
-            when(controller.dbService.findOneById(id)).thenReturn(Future(Success(Some(user))))
+            when(controller.dbService.findOneById(id)).thenReturn(Future(Some(user)))
             val req = FakeRequest()
             val result = controller.findOneById(id)(req)
 
+            implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
             status(result) mustEqual OK
             contentType(result) must beSome("application/json")
             contentAsString(result) must contain("firstname")
@@ -107,6 +112,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val req = FakeRequest()
             val result = controller.all(limit, skip)(req)
 
+            implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
             status(result) mustEqual OK
             contentType(result) must beSome("application/json")
             Json.parse(contentAsString(result)).as[Seq[User]].size must equalTo(2)
@@ -127,6 +133,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val req = FakeRequest().withBody(json)
             val result = controller.update(id)(req)
 
+            implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
             status(result) mustEqual OK
         }
     }

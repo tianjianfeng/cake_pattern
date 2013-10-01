@@ -2,6 +2,7 @@ package controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import models.User
+import models.User._
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
@@ -16,6 +17,10 @@ import scala.concurrent.Future
 import models.UserStatus
 import scala.util.Failure
 import scala.util.Success
+import scala.concurrent.duration._
+import akka.util.Timeout
+import play.api.libs.json.Writes
+import services.BSONObjectIDException
 
 trait UserCtrl extends Controller {
     this: UserServiceComponent with UserRepositoryComponent =>
@@ -24,26 +29,19 @@ trait UserCtrl extends Controller {
         val json = request.body
         val user = User(firstname = (json \ "firstname").as[String],
             lastname = (json \ "lastname").as[String])
-            
+
         dbService.insert(user) map {
-            case Failure(_) => {
-                InternalServerError
-            }
-            case Success(user) => {
-                Created(Json.toJson(user))
-            }
+            case Failure(_) => InternalServerError
+            case Success(user) => Created
         }
     }
 
     def findOneById(id: String) = Action.async {
         dbService.findOneById(id) map {
-            case Failure(_) => BadRequest
-            case Success(optionUser) => {
-                optionUser match {
-                    case Some(user) => Ok(Json.toJson(user))
-                    case None => NotFound
-                }
-            }
+            case Some(user) => Ok(Json.toJson(user))
+            case None => NotFound
+        } recover {
+            case e: BSONObjectIDException => BadRequest
         }
     }
 
@@ -56,20 +54,21 @@ trait UserCtrl extends Controller {
     def update(id: String) = Action.async(parse.json) { implicit request =>
 
         dbService.findOneById(id) flatMap {
-            case Failure(e) => Future(BadRequest)
-            case Success(optionUser) => {
-                optionUser match {
-                    case None => Future(NotFound)
-                    case Some(user) => {
-                        val json = request.body
-                        val updated = user.copy(id = Some(id), firstname = (json \ "firstname").as[String], lastname = (json \ "lastname").as[String])
-                        dbService.update(updated) map {
-                            case Failure(_) => InternalServerError
-                            case Success(user) => Ok
-                        }
-                    }
+            case Some(user) => {
+                val json = request.body
+//                val updated = user.copy(firstname = (json \ "firstname").as[String], lastname = (json \ "lastname").as[String])
+                val updated = User(firstname = (json \ "firstname").as[String], 
+                        lastname = (json \ "lastname").as[String], 
+                        status = UserStatus.withName((json \ "status").as[String]),
+                        createdDate = user.createdDate)
+                dbService.update(id, updated) map {
+                    case Failure(_) => InternalServerError
+                    case Success(user) => Ok
                 }
             }
+            case None => Future(NotFound)
+        } recover {
+            case e: BSONObjectIDException => BadRequest
         }
     }
 }
