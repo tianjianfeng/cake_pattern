@@ -1,23 +1,19 @@
 package controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 import models.User
-import models.User._
+import models.User.UserBSONReader
+import models.User.UserBSONWriter
+import models.User.fmt
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
-import reactivemongo.bson.BSONObjectID
-import services.UserServiceComponent
-import org.joda.time.DateTime
-import scala.concurrent.Future
-import models.UserStatus
-import scala.util.Failure
-import scala.util.Success
 import services.BSONObjectIDException
 import services.DBServiceException
+import services.UserServiceComponent
 
 trait UserCtrl extends Controller {
     this: UserServiceComponent =>
@@ -52,7 +48,7 @@ trait UserCtrl extends Controller {
     }
 
     def all(limit: Int, skip: Int) = Action.async { implicit request =>
-        dbService.all(limit, skip) map { users =>
+        dbService.findAll(limit, skip) map { users =>
             Ok(Json.toJson(users))
         }
     }

@@ -53,7 +53,6 @@ object User {
 
 	implicit object UserBSONReader extends BSONDocumentReader[User] {
 		def read(document: BSONDocument): User = {
-			Logger.debug("H1")
 			User(
 				Option(document.getAs[BSONObjectID]("_id").get.stringify),
 				document.getAs[BSONString]("firstname").map(_.value).getOrElse("<UNDEFINED>"),
@@ -66,19 +65,16 @@ object User {
 
 	implicit object UserBSONWriter extends BSONDocumentWriter[User] {
 		def write(user: User): BSONDocument = {
-			Logger.debug("H2")
 			var bson = BSONDocument(
 				//                    "_id" -> user.id.map(id => BSONObjectID(id)),
 				"firstname" -> BSONString(user.firstname),
 				"lastname" -> BSONString(user.lastname),
 				"status" -> BSONString(user.status.toString))
 
-			println("create date: ==> " + user.createdDate.isDefined)
 			if (user.createdDate.isDefined)
 				bson = bson.add(BSONDocument("createdDate" -> BSONDateTime(user.createdDate.get.getMillis)))
 			if (user.updatedDate.isDefined)
 				bson = bson.add(BSONDocument("updatedDate" -> BSONDateTime(user.updatedDate.get.getMillis)))
-			println("bson ==> " + BSONDocument.pretty(bson))
 			bson
 		}
 	}

@@ -2,15 +2,18 @@ package unit.controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.SECONDS
+
+import org.joda.time.DateTime
 import org.mockito.Mockito.when
-import org.mockito.Mockito.withSettings
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.doThrow
-import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
+
+import akka.util.Timeout
 import controllers.UserCtrl
 import models.User
+import models.UserStatus
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.test.FakeRequest
@@ -19,21 +22,11 @@ import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.OK
 import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.contentType
-import play.api.test.Helpers.running
 import play.api.test.Helpers.status
-import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
-import reactivemongo.bson.BSONObjectID
-import services.ServiceException
-import services.UserServiceComponent
-import scala.util.Success
-import scala.util.Failure
-import scala.concurrent.duration._
-import akka.util.Timeout
-import models.UserStatus
-import reactivemongo.bson.BSONDocument
-import org.joda.time.DateTime
 import reactivemongo.core.commands.LastError
+import services.BSONObjectIDException
 import services.DBServiceException
+import services.UserServiceComponent
 
 class UserControllerUnitSpec extends Specification with Mockito {
 
@@ -106,7 +99,7 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val (limit, skip) = (0, 0)
             val users = List(User(firstname = "abc", lastname = "def"), User(firstname = "123", lastname = "456"))
-            when(controller.dbService.all(limit, skip)).thenReturn(Future(users))
+            when(controller.dbService.findAll(limit, skip)).thenReturn(Future(users))
 
             val req = FakeRequest()
             val result = controller.all(limit, skip)(req)
