@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import org.mockito.Mockito.when
 import org.mockito.Mockito.withSettings
 import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
@@ -23,22 +24,21 @@ import play.api.test.Helpers.status
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
 import services.ServiceException
-import services.UserRepositoryComponent
 import services.UserServiceComponent
 import scala.util.Success
 import scala.util.Failure
-//import play.api.libs.concurrent.Promise
 import scala.concurrent.duration._
 import akka.util.Timeout
-//import play.api.test.FakeApplication
 import models.UserStatus
 import reactivemongo.bson.BSONDocument
+import org.joda.time.DateTime
+import reactivemongo.core.commands.LastError
+import services.DBServiceException
 
 class UserControllerUnitSpec extends Specification with Mockito {
 
-    class TestController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
-        val dbService = mock[UserService](withSettings().defaultAnswer(RETURNS_DEEP_STUBS))
-        val dbRepository = mock[UserRepository]
+    class TestController extends UserCtrl with UserServiceComponent {
+        val dbService = mock[UserService] //(withSettings().defaultAnswer(RETURNS_DEEP_STUBS))
     }
 
     "User Controller" should {
@@ -49,8 +49,8 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val (firstname, lastname) = ("testfirstname", "testlastname")
 
             val user = User(firstname = firstname, lastname = lastname)
-            
-            when(controller.dbService.insert(user)).thenReturn(Future(Success(user)))
+
+            when(controller.dbService.insert(user)).thenReturn(Future(user))
 
             val json = Json.obj(
                 "firstname" -> firstname,
@@ -58,12 +58,12 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
-            
+
             status(result) mustEqual CREATED
-            println ("result ==> " + result)
+
             contentType(result) must beSome("application/json")
-            contentAsString(result) must contain("firstname")
-            contentAsString(result) must contain("lastname")
+            Json.parse(contentAsString(result)).as[User].firstname must equalTo(firstname)
+            Json.parse(contentAsString(result)).as[User].lastname must equalTo(lastname)
         }
 
         "return Internal Server Error when a user is NOT created successfully" in {
@@ -75,7 +75,9 @@ class UserControllerUnitSpec extends Specification with Mockito {
 
             val user = User(firstname = firstname, lastname = lastname)
 
-            when(controller.dbService.insert(user)).thenReturn(Future(Failure(any[ServiceException])))
+            val lastError = LastError(ok = true, err = None, code = None, errMsg = Some("db exception"), originalDocument = None, updated = 1, updatedExisting = true)
+            
+            when(controller.dbService.insert(user)).thenThrow(DBServiceException(lastError))
             val req = FakeRequest().withBody(json)
             val result = controller.create(req)
 
@@ -87,12 +89,12 @@ class UserControllerUnitSpec extends Specification with Mockito {
             val id = "523adf223386b69b47c63431"
 
             val user = User(firstname = "abc", lastname = "edf", status = UserStatus.withName("Active"))
-            
+
             when(controller.dbService.findOneById(id)).thenReturn(Future(Some(user)))
 
             val req = FakeRequest()
             val result = controller.findOneById(id)(req)
-            
+
             status(result) mustEqual OK
             contentType(result) must beSome("application/json")
             contentAsString(result) must contain("firstname")
@@ -114,23 +116,26 @@ class UserControllerUnitSpec extends Specification with Mockito {
             Json.parse(contentAsString(result)).as[Seq[User]].size must equalTo(2)
         }
 
-//        "return OK when a user is updated successfully by its id" in {
-//            val controller = new TestController()
-//            val id = "523adf223386b69b47c63431"
-//
-//            val (firstname, lastname) = ("testfirstname", "testlastname")
-//            val json = Json.obj(
-//                "firstname" -> firstname,
-//                "lastname" -> lastname)
-//
-//            val user = User(firstname = firstname, lastname = lastname)
-//
-//            when(controller.dbService.findOneById(id)).thenReturn(Future(Some(user)))
-//            when(controller.dbService.update(id, user)).thenReturn(Future(Success(user)))
-//            val req = FakeRequest().withBody(json)
-//            val result = controller.update(id)(req)
-//
-//            status(result) mustEqual OK
-//        }
+        "return OK when a user is updated successfully by its id" in {
+            val controller = new TestController()
+            val id = "523adf223386b69b47c63431"
+
+            val (updatedFirstname, updatedLastname) = ("testfirstname", "testlastname")
+            val json = Json.obj(
+                "firstname" -> updatedFirstname,
+                "lastname" -> updatedLastname)
+
+            val createdDate = DateTime.now
+            val retrievedUser = User(id = Some(id), firstname = "firstname", lastname = "lastname", status = UserStatus.Active, createdDate = Some(createdDate))
+
+            val updatedUser = User(firstname = updatedFirstname, lastname = updatedLastname, status = UserStatus.Active, createdDate = Some(createdDate))
+
+            when(controller.dbService.findOneById(id)).thenReturn(Future(Some(retrievedUser)))
+            when(controller.dbService.update(id, updatedUser)).thenReturn(Future(updatedUser))
+            val req = FakeRequest().withBody(json)
+            val result = controller.update(id)(req)
+
+            status(result) mustEqual OK
+        }
     }
 }

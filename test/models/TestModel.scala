@@ -7,6 +7,12 @@ import play.api.libs.json.Writes
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import helpers.EnumUtils.enumWrites
+import reactivemongo.bson.BSONDocumentReader
+import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.BSONString
+import reactivemongo.bson.BSONDateTime
+import reactivemongo.bson.BSONDocumentWriter
 
 object TestStatus extends Enumeration {
     type TestStatus = Value
@@ -22,23 +28,37 @@ case class TestModel(
     def withNewCreatedDate(newCreatedDate: Option[DateTime]): TestModel = this.copy(createdDate = newCreatedDate)
     def withNewUpdatedDate(newUpdatedDate: Option[DateTime]): TestModel = this.copy(updatedDate = newUpdatedDate)
 
+    implicit val writer = TestModel.TestModelBSONWriter
+    implicit val reader = TestModel.TestModelBSONReader
 }
 object TestModel {
 
     implicit val TestStatusReads: Reads[TestStatus.Value] = EnumUtils.enumReads(TestStatus)
     import EnumUtils.enumWrites
 
-    implicit val TestReads: Reads[TestModel] = (
-        (__ \ "id").readNullable[String] and
-        (__ \ "title").read[String] and
-        (__ \ "status").read[TestStatus.Value] and
-        (__ \ "createdDate").readNullable[DateTime] and
-        (__ \ "updatedDate").readNullable[DateTime])(TestModel.apply _)
+    implicit object TestModelBSONReader extends BSONDocumentReader[TestModel] {
+        def read(document: BSONDocument): TestModel = {
+            TestModel(
+                Option(document.getAs[BSONObjectID]("_id").get.stringify),
+                document.getAs[BSONString]("title").map(_.value).getOrElse("<UNDEFINED>"),
+                document.getAs[BSONString]("status").map(status => TestStatus.withName(status.value)).getOrElse(TestStatus.Deleted),
+                document.getAs[BSONDateTime]("createdDate").map(bdt => new DateTime(bdt.value)),
+                document.getAs[BSONDateTime]("updatedDate").map(bdt => new DateTime(bdt.value)))
+        }
+    }
 
-    implicit val TestWrites: Writes[TestModel] = (
-        (__ \ "id").writeNullable[String] and
-        (__ \ "title").write[String] and
-        (__ \ "status").write[TestStatus.Value] and
-        (__ \ "createdDate").writeNullable[DateTime] and
-        (__ \ "updatedDate").writeNullable[DateTime])(unlift(TestModel.unapply))
+    implicit object TestModelBSONWriter extends BSONDocumentWriter[TestModel] {
+        def write(testModel: TestModel): BSONDocument = {
+            var bson = BSONDocument(
+                //                    "_id" -> user.id.map(id => BSONObjectID(id)),
+                "title" -> BSONString(testModel.title),
+                "status" -> BSONString(testModel.status.toString))
+
+            if (testModel.createdDate.isDefined)
+                bson = bson.add(BSONDocument("createdDate" -> BSONDateTime(testModel.createdDate.get.getMillis)))
+            if (testModel.updatedDate.isDefined)
+                bson = bson.add(BSONDocument("updatedDate" -> BSONDateTime(testModel.updatedDate.get.getMillis)))
+            bson
+        }
+    }
 }

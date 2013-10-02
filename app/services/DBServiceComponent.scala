@@ -17,93 +17,69 @@ import models.User
 import models.UserStatus
 
 trait DBServiceComponent[T <: BaseModel[T, U], U] {
-    this: DBRepositoryComponent =>
     val dbService: DBService
+    def db = ReactiveMongoPlugin.db
+    def coll: BSONCollection
 
     class DBService {
 
-        def findOneById[T](id: String)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[Option[T]] = {
-            
-            val p = promise[Option[T]]
+        @throws (classOf[BSONObjectIDException])
+        def findOneById(id: String)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[Option[T]] = {
 
             BSONObjectID.parse(id) match {
                 case Success(bsonId) =>
-                    dbRepository.findOneById(bsonId) onComplete {
-                        case Success(optBson) => {
-                            optBson match {
-                                case Some(bsonObj) => p success Some(BSON.readDocument[T](bsonObj))
-                                case None => p success None
-                            }
-                        }
-                        case Failure(e) => p failure e
+                    coll.find(BSONDocument("_id" -> bsonId)).one[BSONDocument] map {
+                        case Some(bsonObj) => bsonObj.asOpt[T]
+                        case None => None
                     }
-                case Failure(e) => p failure BSONObjectIDException(e.getMessage(), e)
+                case Failure(e) => {
+                    throw BSONObjectIDException(e.getMessage(), e) 
+                }
             }
-
-            p.future
         }
 
         def all(limit: Int, skip: Int)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[List[T]] = {
-            dbRepository.find(BSONDocument(), limit, skip) map { listBson =>
-                for (obj <- listBson) yield BSON.readDocument[T](obj)
+            val cursor = coll.find(BSONDocument()).options(QueryOpts().skip(skip)).cursor[BSONDocument]
+            val cursorWithLimit = if (limit != 0) cursor.toList(limit) else cursor.toList
+
+            val filtered = cursorWithLimit map { list =>
+                for (bsonDoc <- list if (bsonDoc.asOpt[T] != None)) yield BSON.readDocument[T](bsonDoc)
             }
+            filtered
         }
 
-        def insert(s: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONDocumentReader[T]): Future[Try[T]] = {
+        @throws (classOf[DBServiceException])
+        def insert(s: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONDocumentReader[T]): Future[T] = {
             val t = s.withNewCreatedDate(Some(DateTime.now))
-            println(t)
             recover(coll.insert(s.withNewCreatedDate(Some(DateTime.now)))) {
                 s
             }
         }
 
-        def update(id: String, u: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONDocumentReader[T]): Future[Try[T]] = {
+        @throws (classOf[DBServiceException])
+        def update(id: String, u: T)(implicit ec: ExecutionContext, writer: BSONDocumentWriter[T], reader: BSONDocumentReader[T]): Future[T] = {
             val selector = BSONDocument("_id" -> BSONObjectID(id))
 
             val updated = BSONDocument("$set" -> u.withNewUpdatedDate(Some(DateTime.now)))
-            println("user ==> " + BSONDocument.pretty(updated))
             recover(coll.update(selector, updated)) {
                 u
             }
         }
-        def recover[T](operation: Future[LastError])(success: => T)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[Try[T]] = {
+        @throws (classOf[DBServiceException])
+        def recover[T](operation: Future[LastError])(success: => T)(implicit reader: BSONDocumentReader[T], ec: ExecutionContext): Future[T] = {
             operation.map {
                 lastError =>
                     lastError.inError match {
                         case true => {
+                            println ("error ==> ")
                             Logger.error(s"DB operation did not perform successfully: [lastError=$lastError]")
-                            Failure(DBServiceException(lastError))
+                            throw DBServiceException(lastError)
                         }
                         case false => {
-                            Success(success)
+                            success
                         }
                     }
             }
         }
-    }
-}
-
-trait DBRepositoryComponent {
-
-    def db = ReactiveMongoPlugin.db
-    def coll: BSONCollection
-
-    val dbRepository: DBRepository
-
-    class DBRepository {
-        implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-
-        def findOneById(id: BSONObjectID): Future[Option[BSONDocument]] = {
-            coll.find(BSONDocument("_id" -> id)).one[BSONDocument]
-        }
-
-        def find(sel: BSONDocument, limit: Int, skip: Int): Future[List[BSONDocument]] = {
-            val cursor = coll.find(sel).options(QueryOpts().skip(skip).batchSize(limit)).cursor[BSONDocument].toList
-            val filtered = cursor map { list =>
-                for (bsonValue <- list if (bsonValue.asOpt[BSONDocument] != None)) yield bsonValue.as[BSONDocument]
-            }
-            filtered
-        }
-
     }
 }

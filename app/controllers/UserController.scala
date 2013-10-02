@@ -10,7 +10,6 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
-import services.UserRepositoryComponent
 import services.UserServiceComponent
 import org.joda.time.DateTime
 import scala.concurrent.Future
@@ -18,38 +17,36 @@ import models.UserStatus
 import scala.util.Failure
 import scala.util.Success
 import services.BSONObjectIDException
+import services.DBServiceException
 
 trait UserCtrl extends Controller {
-    this: UserServiceComponent with UserRepositoryComponent =>
+    this: UserServiceComponent =>
 
     def create = Action.async(parse.json) { implicit request =>
         val json = request.body
         val user = User(firstname = (json \ "firstname").as[String],
             lastname = (json \ "lastname").as[String])
 
-        dbService.insert(user) map {
-            case Failure(_) => InternalServerError
-            case Success(user) => Created(Json.toJson(user))
+        try {
+            dbService.insert(user) map {
+                case user: User => Created(Json.toJson(user))
+                case _ => BadRequest
+            }
+        } catch {
+            case e: DBServiceException => Future(InternalServerError)
         }
+
     }
 
     def findOneById(id: String) = Action.async {
-        println ("dbservice: ==> " + dbService)
-        println ("id: " + id)
-        println ("another ==> " + dbService.findOneById(id) )
-        dbService.findOneById(id) map {
-            case Some(user) => {
-                println ("user: " + user)
-                Ok(Json.toJson(user))
+        try {
+            dbService.findOneById(id) map {
+                case Some(user) => Ok(Json.toJson(user))
+                case None => NotFound
             }
-            case None => {
-                println ("not found")
-                NotFound
-            }
-        } recover {
+        } catch {
             case e: BSONObjectIDException => {
-                println ("bson exception")
-                BadRequest
+                Future(BadRequest)
             }
         }
     }
@@ -65,14 +62,14 @@ trait UserCtrl extends Controller {
         dbService.findOneById(id) flatMap {
             case Some(user) => {
                 val json = request.body
-//                val updated = user.copy(firstname = (json \ "firstname").as[String], lastname = (json \ "lastname").as[String])
-                val updated = User(firstname = (json \ "firstname").as[String], 
-                        lastname = (json \ "lastname").as[String], 
-                        status = UserStatus.withName((json \ "status").as[String]),
-                        createdDate = user.createdDate)
+                val updated = (Json.toJson(user).as[JsObject] - ("id") ++ json.as[JsObject]).as[User]
+
                 dbService.update(id, updated) map {
-                    case Failure(_) => InternalServerError
-                    case Success(user) => Ok
+                    case user: User => Ok
+                    case _ => InternalServerError
+                } recover {
+                    case e: BSONObjectIDException => BadRequest
+                    case e: Exception => InternalServerError
                 }
             }
             case None => Future(NotFound)
@@ -82,7 +79,6 @@ trait UserCtrl extends Controller {
     }
 }
 
-object UserController extends UserCtrl with UserServiceComponent with UserRepositoryComponent {
+object UserController extends UserCtrl with UserServiceComponent {
     val dbService = new UserService
-    val dbRepository = new UserRepository
 }

@@ -18,7 +18,6 @@ import play.api.libs.functional.syntax.toInvariantFunctorOps
 import play.api.libs.json.Reads.StringReads
 import play.api.libs.json.Writes.StringWrites
 import reactivemongo.core.commands.LastError
-import services.DBRepositoryComponent
 import play.api.libs.json.Json
 import models.BaseModel
 import org.joda.time.DateTime
@@ -37,10 +36,10 @@ import reactivemongo.api.collections.default.BSONCollection
 
 class DBRepositoryUnitSpec extends Specification with Mockito {
 
-    class TestDBRepository extends DBRepositoryComponent{
-        val dbRepository = new DBRepository
-        def coll = mock[BSONCollection](withSettings().defaultAnswer(RETURNS_DEEP_STUBS))
-    }
+//    class TestDBRepository extends DBRepositoryComponent{
+//        val dbRepository = new DBRepository
+//        def coll = mock[BSONCollection](withSettings().defaultAnswer(RETURNS_DEEP_STUBS))
+//    }
 
 //    "Recover" should {
 //
